@@ -1,0 +1,376 @@
+>D 48
+;put address of device below for uploading and ctrl+alt+u to upload
+;IP=172.18.203.139
+
+SB=4096
+IP=172.18.203.139
+
+print we are initializing
+
+; raw cell voltage register array
+m:cvr=0 19
+; config read register
+m:cfr=0 7
+; config write register
+m:writecfr=0 7
+; calculated cell voltage array
+m:cv=0 12
+; command array
+m:cmnd=0 1
+; temperature array
+m:tmp=0 6
+; max discharge value based on numcells
+maxdcc=0
+; discharge tribble
+dcc=0
+; discharge tribble read from config array
+dccread=0
+
+cvhold=0
+cntr=0
+; minimum cell voltage start point
+min=4
+; max cell voltage start point
+max=0
+; min cell
+minc=0
+; max cell
+maxc=0
+; number of cells in battery pack
+numcells=6
+; cell mask
+mci=0
+; flag to write config array
+writecfg=1
+; cell pack average
+avg=0
+; communications timeout counter
+cmcntr=0
+; undervoltage flag for config array
+vuv=125
+; overvoltage flag for config array
+vov=167
+; disconnect solar panel relay at max cell charge
+maxdiscnct=4
+; reconnect solar panel once voltage drops to maxrecnct
+maxrecnct=3.95
+; disconnect load relay at min cell charge
+mindiscnct=3.2
+; reconnect load relay once voltage rises to minrecnct
+minrecnct=3.3
+; for spi writes
+res=0
+sfty=3
+; string for visualizing discharge tribble on main page GUI
+vstr=""
+tmvar=""
+; cell voltage to begin/end balancing
+blncstrt=3.9 
+; alarm reporting counters
+sfty=0
+expc=0
+; current measured by INA226
+curr=0
+; pack voltage added up from cell voltages
+volt=0
+; pack voltage reported by INA226
+inavolt=0
+; uptime calcs
+updy=0
+cmplt=0
+prb1=0
+prb2=0
+prb3=0
+
+print initialization complete
+
+>B
+print we are booting
+
+; max value for discharge tribble based on number of cells in pack
+maxdcc=1<<numcells-1
+; initialize arrays for startup
+cvr[0]=0
+cfr[0]=0
+cfr[1]=2
+writecfr[0]=0
+writecfr[1]=1
+writecfr[2]=97
+cmnd[0]=0
+;set GPIO15 pin to switch input
+;spinm(15 0) 
+; start timer for setting voltage value of INA226
+;ts1(2000)
+;res=spi(0 14 13 12)
+; initialize SPI pins as defined in GUI config (18,19,23,5)
+res=spi(0 -1 .5)
+res=spi(1 1 5)
+; ensure correct setoptions and power on state (intercommand delay, underscore for sensors)
+=>setoption34 50
+=>setoption64 1
+;Turn on system power
+=>power4 1
+;=>power2 0
+; mask all cells since we aren't dealing with interrupts
+mci=4095 
+;mci=4095-(1<<(numcells)-1)
+
+;>ti1
+; set INA226 full scale voltage to value based on voltage divider resistors
+;=>sensor54 13 83.54
+
+print we are done booting
+
+>ti2
+print ti2 triggered
+
+; construct discharge tribble for pulling down high cells on even days, pull up low cells on odd days
+if day%2==0 {
+	for cntr 1 numcells 1
+		cvhold=cv[cntr]-0.02
+		if (cvhold>avg and cv[cntr]>blncstrt) {
+			vstr+="d"
+			dcc=dcc|(1<<(cntr-1))
+		}
+		else { 
+			if (cv[cntr]<=avg) {
+				dcc=dcc&(maxdcc-(1<<(cntr-1)))
+			}
+			vstr+="r"
+		}
+	next
+	cmplt=7
+;	print %cv[1]%,%cv[2]%,%cv[3]%,%cv[4]%,%cv[5]%,%cv[6]%,%cv[7]%,%cv[8]%,%cv[9]%,%cv[10]%,%cv[11]%,%cv[12]%
+}
+else {
+	for cntr 1 numcells 1
+		if (cntr!=minc and cv[cntr]>blncstrt) {
+			dcc=dcc|(1<<(cntr-1))
+			vstr+="d"
+		}
+		else {
+			dcc=dcc&(maxdcc-(1<<(cntr-1)))
+			vstr+="r"
+		}
+	next
+	cmplt=7
+}
+
+print ti2 done
+
+>T
+print reading current and voltage from INA226
+curr=INA226_1#Current
+inavolt=INA226_1#Voltage
+print sensor read complete
+
+>S
+print starting main loop
+
+;reset arrays
+cvr[1]=0x04
+tmp[1]=0x08
+for cntr 2 19 1
+	cvr[cntr]=0
+next
+
+tmvar=s2hms(upsecs)
+updy=int(uptime/1440)
+
+;display things on SSD1306
+;dt [s1c1l1f5] A=%3curr% V=%2volt% 
+;dt [c1l2] M=%0maxc%:%3max% m=%0minc%:%3min%
+;dt [c1l3] %0updy%T%tmvar% S=%0stack%
+;dt [d]
+cmnd[1]=0x30 ; TempAD conversion
+cfr[1]=2
+
+for cntr 2 7 1
+	cfr[cntr]=0
+next
+
+if (upsecs%10==0) {
+	writecfg=1
+}
+
+if (upsecs%60==0) {
+;	blncstrt=3.8+(day%2*.1)
+	ts2(5000)
+	dcc=0
+	vstr=""
+}
+
+
+if ((writecfg==1) and (cmplt>0)) {
+    print updating SPI config reg
+	writecfr[1]=1
+	writecfr[2]=97
+	writecfr[3]=(dcc&255)
+	writecfr[4]=((dcc>>8)|(mci<<4&240))
+	writecfr[5]=(mci>>4)
+	writecfr[6]=vuv
+	writecfr[7]=vov
+	res=spi(2 1 writecfr 7 1)
+	writecfg=0
+	cmplt-=1
+}
+
+print reading SPI registers
+
+; read temperature, voltage, and config register
+delay(5)
+res=spi(2 1 cmnd 1 1) ; TempAD conversion
+delay(22)
+cmnd=0x10
+res=spi(2 1 cmnd 1 1) ; VoltageAD conversion
+delay(22)
+res=spi(2 1 cvr 19 1) ; Read cell voltages
+delay(2)
+res=spi(2 1 tmp 6 1) ; Read temperatures
+delay(2)
+res=spi(2 1 cfr 7 1) ; Read config register
+dccread=(cfr[4]&15)<<8|cfr[3]
+
+; calculate average and total voltage
+print calculating voltages and temps
+avg=0
+for cntr 1 numcells 1
+	avg+=cv[cntr]
+next
+volt=avg
+avg/=numcells
+
+; calculate thermoprobe voltages/temps
+prb1=((tmp[3]<<8)|tmp[2])*.0015
+prb2=((tmp[4]<<4)|(tmp[3]>>4))*.0015
+prb3=((tmp[6]<<8)|tmp[5])*.0015
+
+print creating cv array
+; arrange 2-byte cvr array into 3-byte cv array
+for cntr 1 (numcells-1) 2
+	cv[cntr]=((cvr[cntr*1.5+1.5]%16)<<8)|(cvr[(cntr*1.5+0.5)]&255)*.0015
+next
+
+for cntr 2 (numcells) 2
+	cv[cntr]=(cvr[(cntr*1.5+1)]*16)|((cvr[(cntr*1.5)]>>4)&15)*.0015
+next
+
+print finding min and max cell voltages
+; calculate min/max cells/values
+for cntr 1 numcells 1
+	if (cntr==1) {
+		min=cv[cntr]
+		max=cv[cntr]
+	}
+	if (cv[cntr]>=max) {
+		max=cv[cntr]
+		maxc=cntr
+	}
+	if (cv[cntr]<=min) {
+		min=cv[cntr]
+		minc=cntr
+	}
+next
+
+;if (max>4.05 and upsecs%10==0) {
+;	=>webquery https://url.us.m.mimecastprotect.com/s/AnatCzpE0ZF9vYWxsotoS9-Tql?domain=ntfy.sh POST [Title: Latyr BMS] Cell-%maxc%: %2max%v cell voltage too high!
+;}
+
+;if (pwr[1]==0 and curr>0.05) {
+;	sfty+=1
+;}
+;else {
+;	expc=2
+;	sfty=0
+;}
+
+;if (sfty==expc) {
+;	=>webquery https://url.us.m.mimecastprotect.com/s/AnatCzpE0ZF9vYWxsotoS9-Tql?domain=ntfy.sh POST [Title: Latyr BMS] %2curr% while relay off
+;	sfty=0
+;	expc*=2
+;}
+
+if (curr<-20) {
+    print current too high, turning off load
+	=>power2 0
+}
+
+; load on/off switch
+;if (pin[15]==0 and pwr[2]==1) {
+;	=>power2 0
+;}
+
+if (upsecs%60==0 and min<sfty) {
+    print cells below safety voltage, turning off all power
+	=>power4 0
+}
+
+; every 30 seconds switch on/off solar and load depending on max and min cell voltages
+if (upsecs%30==0) {
+    print balancing cells
+	if (((max>maxdiscnct) or (time>1140) or (time<420)) and (pwr[1]==1)) {
+		=>power1 0
+	}
+	if ((max<maxrecnct) and (pwr[1]==0) and (time<=1140) and (time>=420)) {
+		=>power1 1
+	}
+	if ((min<mindiscnct) and (pwr[2]==1)) {
+		=>power2 0
+	}
+	if ((min>minrecnct) and (pwr[2]==0)) and (pin[15]==1) {
+		=>power2 1
+	}
+}
+
+; turn fan on and off based on time of day (maybe add in current or temp sensor)
+if (((time>540 and time<960) or (curr<-2)) and (pwr[3]==0)) {
+    print turning fan on
+	=>power3 1
+}
+if (((time<=540 or time>=960) and (curr>=-2)) and (pwr[3]==1)) {
+    print turning fan off
+	=>power3 0
+}
+
+if (writecfr[2]==0) {
+	cmcntr+=1
+	print Lost comms for %cmcntr% sec
+} 
+else {
+	cmcntr=0
+}
+
+;print %0dcc%,%0dccread%,%0writecfg%,%0cmplt%,%cv[1]%,%cv[2]%
+>J
+print sending JSON data
+,"Battery":{
+"Cell-1":%cv[1]%,
+"Cell-2":%cv[2]%,
+"Cell-3":%cv[3]%,
+"Cell-4":%cv[4]%,
+"Cell-5":%cv[5]%,
+"Cell-6":%cv[6]%,
+;"Cell-7":%cv[7]%,
+;"Cell-8":%cv[8]%,
+;"Cell-9":%cv[9]%,
+;"Cell-10":%cv[10]%,
+;"Cell-11":%cv[11]%,
+;"Cell-12":%cv[12]%,
+"Max":%max%,
+"Min":%min%,
+"Temp1":%1prb1%,
+"Temp2":%1prb2%,
+"Temp3":%1prb3%
+}
+>W
+print updating web page
+<left>c1=%3cv[1]%, c2=%3cv[2]%<br>
+<left>c3=%3cv[3]%, c4=%3cv[4]%<br>
+<left>c5=%3cv[5]%, c6=%3cv[6]%<br>
+<center>Max=%0maxc% %3max%, Min= %0minc% %3min%<br>
+<center>Avg=%3avg%, DCC=%vstr% <br>, Sw=%0pin[22]%
+<center>DCC=%0dcc%, DCCRd=%0dccread%<br>
+<center>Curr=%curr%,expc=%0expc%,sfty=%0sfty%<br>
+<center>volt=%2volt%,day=%0day%<br>,uptime=%tmvar%
+<center>Temp1=%1prb1%,Temp2=%1prb2%<br>,Temp3=%1prb3%
+
