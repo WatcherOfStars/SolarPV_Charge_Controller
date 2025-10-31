@@ -8,14 +8,17 @@ INA226 ina(0x40); // Create an INA226 object with the default I2C address
 DS3231 rtc_clock; // create clock object, see https://github.com/hasenradball/DS3231-RTC
 
 void setup(){
-  Wire.begin(); // Initialize I2C
+  // Initialize I2C
+  Wire.begin(); 
 
+  // Start serial communication for debugging
   Serial.begin(115200);
   Serial.println("System Booted");
 
+  // Setup pins
   pinMode(DEBUG_LIGHT, OUTPUT);
 
-  //check for ina226 shunt
+  // Check for ina226 shunt
   if (!ina.begin()) {
     Serial.println("INA226 not found!");
     while (1);
@@ -25,22 +28,78 @@ void setup(){
   ina.setMaxCurrentShunt(60); //60A max current
   ina.setAverage(4); // Set averaging to 4 samples
 
-  //setup real time clock
+  // Check for real time clock
+
+  // Configure rtc
+
+  // Check for BMS
+
+  // Configure BMS
+
+  // Get system settings
+
+  // Perform initial safety checks
+
+  // Initialize arrays
+
+  // Calculate max discharge tribble based on cell count
+
+  // Turn system on, indicate with debug light
+  digitalWrite(DEBUG_LIGHT, HIGH);
 }
 
 void loop() {
-  digitalWrite(DEBUG_LIGHT, HIGH);
-  Serial.println("ON");
-  delay(500);
-  digitalWrite(DEBUG_LIGHT, LOW);
-  Serial.println("OFF");
-  delay(500);
+  //##### SAFETY CHECKS #####
+  // perform safety checks before executing main tasks
+  safety_checks();
 
-  update_shunt();
+  //##### RETRIEVE DATA #####
+  // get data from INA226
+  get_shunt_data();
 
+  // get data from RTC
+  get_rtc_data();
+
+  // update BMS depending on even or odd day
+  update_bms();
+
+  // get data from BMS
+  get_bms_data();
+
+  //##### UPDATE ARRAYS AND CALCULATIONS ##### (may want to move some to initialization)
+  // update arrays
+  // update vars
+
+  // calculate pack average and total voltage
+  // calculate min/max cell voltages and indexes
+  // calculate pack temerature
+  // calculate ambient temperature
+  // calculate power in/out of system
+  // calculate voltage drop behavior and resulting thresholds from panel voltage, battery voltage and charge, and load draw 
+
+  // arrange 2-byte cell voltage array into 3-byte calculated format
+
+  //##### SPI COMMUNICATION #####
+  // SPI write every 10 seconds
+
+  //##### POWER MANAGEMENT #####
+  // if batteries full, cut power from panels
+  // if batteries below threshold, enable charging from panels
+  // if batteries low, cut power to loads
+  // if batteries above threshold, enable power to loads
+
+  // turn fan on or off based on temperature readings and current
+
+  //##### PUBLISH DATA #####
+  // publish over MQTT every 60 seconds
+  // publish to web interface every 60 seconds
+
+  delay(2000); // Wait for 2 seconds before the next reading
 }
 
-void update_shunt(){
+
+// Gets the voltage, current, and power from the INA226
+void get_shunt_data(){
   float busVoltage = ina.getBusVoltage_mV();
   float shuntVoltage = ina.getShuntVoltage_mV();
   float current = ina.getCurrent_mA();
@@ -62,3 +121,25 @@ void update_shunt(){
   Serial.print(power);
   Serial.println(" mW");
 }
+
+void get_rtc_data(){
+  // Placeholder for RTC update logic
+}
+
+// updates the battery management system depending if it's an even or odd day
+void update_bms(){
+  // Placeholder for BMS update logic
+}
+
+// gets cell voltages and temperatures from the BMS
+void get_bms_data(){
+  // Placeholder for BMS data retrieval logic
+}
+
+void safety_checks(){
+  // Check overcurrent
+  // Check if battery voltages are within safe limits
+  // Check temperatures
+  // Check component statuses
+}
+
