@@ -4,7 +4,7 @@
 #include <INA226.h>
 #include <RTClib.h>
 
-//INA226 ina(0x40); // Create an INA226 object with the default I2C address
+INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
@@ -20,15 +20,14 @@ void setup(){
   // Setup pins
   pinMode(DEBUG_LIGHT, OUTPUT);
 
-  // // Check for ina226 shunt
-  // if (!ina.begin()) {
-  //   Serial.println("INA226 not found!");
-  //   while (1);
-  // }
-  // // Configure the INA226 (e.g., calibration, averaging)
-  // //ina.setCalibration(0.01, 10.0); // Example: 0.01 Ohm shunt, 10A max current
-  // ina.setMaxCurrentShunt(60); //60A max current
-  // ina.setAverage(4); // Set averaging to 4 samples
+  // Check for ina226 shunt
+  if (!ina.begin()) {
+    Serial.println("INA226 not found!");
+    while (1);
+  }
+  // Configure the INA226 (e.g., calibration, averaging)
+  ina.setMaxCurrentShunt(20, 1); //20A max current 1 ohm resistance
+  ina.setAverage(4); // Set averaging to 4 samples
 
   // Check for real time clock
   if (! rtc.begin()) {
@@ -42,7 +41,7 @@ void setup(){
   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Uncomment the following line to manually set the time (e.g., January 21, 2024 at 3:00:00)
-  rtc.adjust(DateTime(2025, 11, 6, 11, 5, 0)); 
+  // rtc.adjust(DateTime(2025, 11, 6, 11, 5, 0)); 
 
   // Check for BMS
 
@@ -62,26 +61,50 @@ void setup(){
 
 // Gets the voltage, current, and power from the INA226
 void get_shunt_data(){
-  // float busVoltage = ina.getBusVoltage_mV();
-  // float shuntVoltage = ina.getShuntVoltage_mV();
-  // float current = ina.getCurrent_mA();
-  // float power = ina.getPower_mW();
+  // Read values from INA226 (may require calibration)
+  float busVoltage = ina.getBusVoltage_mV();
+  float shuntVoltage = ina.getShuntVoltage_mV();
+  float current = ina.getCurrent_mA();
+  float power = ina.getPower_mW();
 
-  // Serial.print("Bus Voltage: ");
-  // Serial.print(busVoltage);
-  // Serial.println(" V");
+  Serial.print("Bus Voltage: ");
+  Serial.print(busVoltage);
+  Serial.println(" mV");
 
-  // Serial.print("Shunt Voltage: ");
-  // Serial.print(shuntVoltage);
-  // Serial.println(" mV");
+  Serial.print("Shunt Voltage: ");
+  Serial.print(shuntVoltage);
+  Serial.println(" mV");
 
-  // Serial.print("Current: ");
-  // Serial.print(current);
-  // Serial.println(" mA");
+  Serial.print("Current: ");
+  Serial.print(current);
+  Serial.println(" mA");
 
-  // Serial.print("Power: ");
-  // Serial.print(power);
-  // Serial.println(" mW");
+  Serial.print("Power: ");
+  Serial.print(power);
+  Serial.println(" mW");
+
+  // Verify power calculation
+  Serial.println("\nPOWER2 = busVoltage x current");
+  Serial.println(" V\t mA \t mW \t mW \t mW");
+  Serial.println("BUS\tCURRENT\tPOWER\tPOWER2\tDELTA");
+  for (int i = 0; i < 20; i++)
+  {
+    float bv = ina.getBusVoltage();
+    float cu = ina.getCurrent_mA();
+    float po = ina.getPower_mW();
+
+    Serial.print(bv, 3);
+    Serial.print("\t");
+    Serial.print(cu, 3);
+    Serial.print("\t");
+    Serial.print(po, 2);
+    Serial.print("\t");
+    Serial.print(bv * cu, 2);
+    Serial.print("\t");
+    Serial.print((bv * cu) - po, 2);
+    Serial.println();
+    delay(50);
+  }
 }
 
 void get_rtc_data(){
