@@ -3,13 +3,45 @@
 #include <Wire.h>
 #include <INA226.h>
 #include <RTClib.h>
+#include <WiFi.h>
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
+// Replace with your network credentials
+const char* ssid = "plantphone";
+const char* password = "growing23";
+
+// Set web server port number to 80
+WiFiServer server(80);
+
+// Variable to store the HTTP request
+String header;
+
+// Current time
+unsigned long currentTime = millis();
+// Previous time
+unsigned long previousTime = 0; 
+// Define timeout time in milliseconds (example: 2000ms = 2s)
+const long timeoutTime = 2000;
 
 void setup(){
+  // Connect to Wi-Fi network with SSID and password
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  // Print local IP address and start web server
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  server.begin();
+
   // Initialize I2C
   Wire.begin(); 
 
@@ -26,7 +58,7 @@ void setup(){
     while (1);
   }
   // Configure the INA226 (e.g., calibration, averaging)
-  ina.setMaxCurrentShunt(20, 1); //20A max current 1 ohm resistance
+  ina.setMaxCurrentShunt(20, 3.7); //20A max current 1 ohm resistance
   ina.setAverage(4); // Set averaging to 4 samples
 
   // Check for real time clock
@@ -59,13 +91,84 @@ void setup(){
   digitalWrite(DEBUG_LIGHT, HIGH);
 }
 
+//loop wifi
+void loop_wifi(){
+  WiFiClient client = server.available();   // Listen for incoming clients
+
+  if (client) {                             // If a new client connects,
+    currentTime = millis();
+    previousTime = currentTime;
+    Serial.println("New Client.");          // print a message out in the serial port
+    String currentLine = "";                // make a String to hold incoming data from the client
+    while (client.connected() && currentTime - previousTime <= timeoutTime) {  // loop while the client's connected
+      currentTime = millis();
+      if (client.available()) {             // if there's bytes to read from the client,
+        char c = client.read();             // read a byte, then
+        Serial.write(c);                    // print it out the serial monitor
+        header += c;
+        if (c == '\n') {                    // if the byte is a newline character
+          // if the current line is blank, you got two newline characters in a row.
+          // that's the end of the client HTTP request, so send a response:
+          if (currentLine.length() == 0) {
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println("Connection: close");
+            client.println();
+            
+            // Display the HTML web page
+            client.println("<!DOCTYPE html><html>");
+            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            client.println("<link rel=\"icon\" href=\"data:,\">");
+            // CSS to style the on/off buttons 
+            // Feel free to change the background-color and font-size attributes to fit your preferences
+            client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+            client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+            client.println(".button2 {background-color: #555555;}</style></head>");
+            
+            // Web Page Heading
+            client.println("<body><h1>ESP32 Web Server</h1>");
+            
+              // Read values from INA226 (may require calibration)
+              float busVoltage = ina.getBusVoltage_mV();
+              float shuntVoltage = ina.getShuntVoltage_mV();
+              float current = busVoltage / 3.7;
+              float power = current * busVoltage / 1000; // in mW
+
+            // Display current state
+            //client.println("<p>Bus Voltage " + to_string(busVoltage) + "</p>");
+            client.println("</body></html>");
+            
+            // The HTTP response ends with another blank line
+            client.println();
+            // Break out of the while loop
+            break;
+          } else { // if you got a newline, then clear currentLine
+            currentLine = "";
+          }
+        } else if (c != '\r') {  // if you got anything else but a carriage return character,
+          currentLine += c;      // add it to the end of the currentLine
+        }
+      }
+    }
+    // Clear the header variable
+    header = "";
+    // Close the connection
+    client.stop();
+    Serial.println("Client disconnected.");
+    Serial.println("");
+  }
+}
+
 // Gets the voltage, current, and power from the INA226
 void get_shunt_data(){
   // Read values from INA226 (may require calibration)
   float busVoltage = ina.getBusVoltage_mV();
   float shuntVoltage = ina.getShuntVoltage_mV();
-  float current = ina.getCurrent_mA();
-  float power = ina.getPower_mW();
+  float current = busVoltage / 3.7;
+  float power = current * busVoltage / 1000; // in mW
 
   Serial.print("Bus Voltage: ");
   Serial.print(busVoltage);
@@ -82,29 +185,6 @@ void get_shunt_data(){
   Serial.print("Power: ");
   Serial.print(power);
   Serial.println(" mW");
-
-  // Verify power calculation
-  Serial.println("\nPOWER2 = busVoltage x current");
-  Serial.println(" V\t mA \t mW \t mW \t mW");
-  Serial.println("BUS\tCURRENT\tPOWER\tPOWER2\tDELTA");
-  for (int i = 0; i < 20; i++)
-  {
-    float bv = ina.getBusVoltage();
-    float cu = ina.getCurrent_mA();
-    float po = ina.getPower_mW();
-
-    Serial.print(bv, 3);
-    Serial.print("\t");
-    Serial.print(cu, 3);
-    Serial.print("\t");
-    Serial.print(po, 2);
-    Serial.print("\t");
-    Serial.print(bv * cu, 2);
-    Serial.print("\t");
-    Serial.print((bv * cu) - po, 2);
-    Serial.println();
-    delay(50);
-  }
 }
 
 void get_rtc_data(){
