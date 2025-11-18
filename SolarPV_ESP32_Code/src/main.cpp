@@ -4,6 +4,11 @@
 #include <INA226.h>
 #include <RTClib.h>
 #include <WiFi.h>
+#include <bits/stdc++.h>
+#include <string>
+#include <iostream>
+
+using namespace std;
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
@@ -25,6 +30,14 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0; 
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
+
+// Current state
+float busVoltage = 0;
+float shuntVoltage = 0;
+float current = 0;
+float power = 0;
+float temperature = 0;
+
 
 void setup(){
   // Connect to Wi-Fi network with SSID and password
@@ -94,6 +107,8 @@ void setup(){
 //loop wifi
 void loop_wifi(){
   WiFiClient client = server.available();   // Listen for incoming clients
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
   if (client) {                             // If a new client connects,
     currentTime = millis();
@@ -131,14 +146,28 @@ void loop_wifi(){
             // Web Page Heading
             client.println("<body><h1>ESP32 Web Server</h1>");
             
-              // Read values from INA226 (may require calibration)
-              float busVoltage = ina.getBusVoltage_mV();
-              float shuntVoltage = ina.getShuntVoltage_mV();
-              float current = busVoltage / 3.7;
-              float power = current * busVoltage / 1000; // in mW
+            // Compose messages
+            DateTime now = rtc.now(); // Get the current date and time from the RTC
+            std::string timeMessage = "<p>Time " + to_string(now.hour()) + ":" + to_string(now.minute()) + ":" + to_string(now.second()) + "</p>";
+            std::string dateMessage = "<p>Date " + to_string(now.day()) + "/" + to_string(now.month()) + "/" + to_string(now.year()) + "</p>";
+
+            std::string busVoltageStr = to_string(busVoltage);
+            std::string busVMessage = "<p>Bus Voltage " + busVoltageStr + "</p>";
+            std::string shuntVoltageStr = to_string(shuntVoltage);
+            std::string shuntVMessage = "<p>Shunt Voltage " + shuntVoltageStr + "</p>";
+            std::string currentStr = to_string(current);
+            std::string currentMessage = "<p>Current " + currentStr + "</p>";
+            std::string powerStr = to_string(power);
+            std::string powerMessage = "<p>Power " + powerStr + "</p>";
+
 
             // Display current state
-            //client.println("<p>Bus Voltage " + to_string(busVoltage) + "</p>");
+            client.println(timeMessage.c_str());
+            client.println(dateMessage.c_str());
+            client.println(busVMessage.c_str());
+            client.println(shuntVMessage.c_str());
+            client.println(currentMessage.c_str());
+            client.println(powerMessage.c_str());
             client.println("</body></html>");
             
             // The HTTP response ends with another blank line
@@ -165,10 +194,10 @@ void loop_wifi(){
 // Gets the voltage, current, and power from the INA226
 void get_shunt_data(){
   // Read values from INA226 (may require calibration)
-  float busVoltage = ina.getBusVoltage_mV();
-  float shuntVoltage = ina.getShuntVoltage_mV();
-  float current = busVoltage / 3.7;
-  float power = current * busVoltage / 1000; // in mW
+  busVoltage = ina.getBusVoltage_mV();
+  shuntVoltage = ina.getShuntVoltage_mV();
+  current = busVoltage / 3.7;
+  power = current * busVoltage / 1000; // in mW
 
   Serial.print("Bus Voltage: ");
   Serial.print(busVoltage);
@@ -273,12 +302,14 @@ void loop() {
   // if batteries low, cut power to loads
   // if batteries above threshold, enable power to loads
 
+
   // turn fan on or off based on temperature readings and current
 
   //##### PUBLISH DATA #####
   // Serial.println("Publishing Data...");
   // publish over MQTT every 60 seconds
   // publish to web interface every 60 seconds
+  loop_wifi();
   
   // Flash debug light to indicate loop completion
   digitalWrite(DEBUG_LIGHT, LOW);
