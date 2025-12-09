@@ -11,8 +11,10 @@
 #define CS 5
 #define BMS_ADDRESS 0x80
 
+#define TEST_PIN 17
+
 // Instantiate LTC6802 object
-static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
+//static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
 
 // Define registers as bitsets for SPI communication
 std::bitset<2> cmnd; //command register
@@ -26,12 +28,24 @@ float t1 = 0;
 bool write_config = true;
 
 void setup() {
+  Serial.begin(115200);
+  Serial.println("Starting BMS Initialization...");
+
   //start SPI
   SPI.begin(SCK, MISO, MOSI);
   SPI.setFrequency(500000); //0.5 MHz
-  //LTC6802::initSPI(MOSI, MISO, SCK);
 
-  Serial.begin(115200);
+  pinMode(TEST_PIN, OUTPUT);
+
+  // //start BMS connection
+  // LTC6802::initSPI(23U, 19U, 18U); //MOSI, MISO, SCK
+  // bms.cfgRead();         // Read configuration from chip
+  // bms.cfgSetCDC(1);      // Measure mode 13ms
+  // bms.cfgSetMCI(0x0fff); // Disable interrupts
+  // bms.cfgWrite(false);   // Write configuration back to chip
+
+  Serial.println("Initialized chip");
+  delay(1000);
   
   cvr[0]=0;
   cfr[0]=0;
@@ -49,6 +63,15 @@ void setup() {
 
 void loop() {
   Serial.println("Starting Main Loop...");
+  digitalWrite(TEST_PIN, HIGH); // Set test pin high to indicate loop start
+
+  // bms.cfgWrite(false);          // Write configuration back to chip, because chip resets these every 2.5s when nothing happens on SPI
+  // bms.temperatureMeasure();     // Measure temperatures on chip
+  // bms.temperatureRead();        // Read temperatures from chip
+  // bms.temperatureDebugOutput(); // Send temperatures to serial
+  // bms.cellsMeasure();           // Measure cell voltages on chip
+  // bms.cellsRead();              // Read cell voltages from chip
+  // bms.cellsDebugOutput();       // Send cell voltages to serial
 
   //reset arrays
   Serial.println("Resetting Arrays...");
@@ -102,23 +125,23 @@ void loop() {
 
   //read spi registers
   Serial.println("Reading SPI Registers...");
-  sleep(0.005);
+  delay(5);
   Serial.println("Temp convertion...");
   SPI.transfer(0x30); //temperature conversion
-  sleep(0.0022);
+  delay(22);
   cmnd = 0x10;
   Serial.println("Voltage conversion...");
   SPI.transfer(0x10); //voltage conversion
-  sleep(0.0022);
+  delay(22);
   Serial.println("Reading cell voltages...");
   cvr = SPI.transfer(0x04); //read cell voltages
-  sleep(0.0022);
+  delay(22);
   Serial.println("Reading temperature...");
   tmp = SPI.transfer(0x08); //read temperature
-  sleep(0.002);
+  delay(2);
   Serial.println("Reading config register...");
   cfr = SPI.transfer(0x02); //read config register
-  sleep(0.002);
+  delay(2);
 
   //print results
   Serial.print("Cell Voltages: ");
@@ -138,6 +161,8 @@ void loop() {
   Serial.println();
   Serial.println("-----");
 
-  sleep(5); //wait 5 seconds before next loop
+  // delay(100);
+  // digitalWrite(TEST_PIN, LOW); // Set test pin low to indicate loop end
+  sleep(1); //wait 5 seconds before next loop
 
 }
