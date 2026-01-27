@@ -3,16 +3,8 @@
 #include <ESPUI.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include <sMQTTBroker.h>
-
-
-//Settings
-#define SLOW_BOOT 0
-#define HOSTNAME "ESPUITest"
-#define FORCE_USE_HOTSPOT 0
-const char* MQTT_CLIENT_USER = "solarpv"; // username for mqtt clients. Set your own value here.
-const char* MQTT_CLIENT_PASSWORD = "solarpv123"; // password for mqtt clients. Set your own value here.
-
+#include <vars.h>
+#include <broker.cpp>
 
 //Function Prototypes
 void connectWifi();
@@ -33,42 +25,6 @@ uint16_t mainLabel, mainSwitcher, mainSlider, test_message_test, mainNumber, mai
 uint16_t styleButton, styleLabel, styleSwitcher, styleSlider, styleButton2, styleLabel2, styleSlider2;
 uint16_t graph;
 volatile bool updates = false;
-
-// ========== MQTT Broker class ==========
-
-class MyBroker:public sMQTTBroker
-{
-public:
-    bool onEvent(sMQTTEvent *event) override
-    {
-        switch(event->Type())
-        {
-        case NewClient_sMQTTEventType:
-            {
-                sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
-                // Check username and password used for new connection
-                if ((e->Login() != MQTT_CLIENT_USER) || (e->Password() != MQTT_CLIENT_PASSWORD)) {
-                  Serial.println("Invalid username or password");  
-                  return false;
-                  }
-            };
-            break;
-        case LostConnect_sMQTTEventType:
-            WiFi.reconnect();
-            break;
-        case UnSubscribe_sMQTTEventType:
-        case Subscribe_sMQTTEventType:
-            {
-                sMQTTSubUnSubClientEvent *e=(sMQTTSubUnSubClientEvent*)event;
-            }
-            break;
-        }
-        return true;
-    }
-};
-
-
-MyBroker broker;
 
 void setUpUI(){
 	//Turn off verbose debugging
@@ -213,29 +169,27 @@ void extendedCallback(Control* sender, int type, void* param)
     Serial.println((long)param);
 }
 
-void setup() {
-	Serial.begin(115200);
-	while(!Serial);
-	if(SLOW_BOOT) delay(5000); //Delay booting to give time to connect a serial monitor
+void setupWeb(){
 	connectWifi();
-	Serial.begin(115200);
+
 
     // Display the IP address of the ESP32 (MIGHT BREAK)
     IPAddress IP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
     Serial.println(IP);
-   
-    const unsigned short mqttPort=9000;
-    broker.init(mqttPort);
+      
+    //setup MQTT broker
+    setupBroker();
 
 	WiFi.setSleep(false); //turn off sleeping to increase UI responsivness (at the cost of power use)
-	setUpUI();
-}
+} 
 
-void loop() {
-	broker.update(); //update MQTT broker
-
+void updateWeb(){
 	static long unsigned lastTime = 0;
+
+    //update MQTT broker
+    updateBroker();
+
 
 	if(millis() > lastTime + 500) {
 		
