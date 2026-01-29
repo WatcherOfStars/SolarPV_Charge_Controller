@@ -3,21 +3,10 @@
 #include <ESPUI.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include <vars.h>
-#include <broker.cpp>
+#include <broker.h>
+#include <web_ui.h>
 
-//Function Prototypes
-void connectWifi();
-void setUpUI();
-void enterWifiDetailsCallback(Control *sender, int type);
-void textCallback(Control *sender, int type);
-void sendTestPub(Control *sender, int type);
-void generalCallback(Control *sender, int type);
-void updateCallback(Control *sender, int type);
-void getTimeCallback(Control *sender, int type);
-void graphAddCallback(Control *sender, int type);
-void graphClearCallback(Control *sender, int type);
-void extendedCallback(Control* sender, int type, void* param);
+using namespace constants;
 
 //UI handles
 uint16_t wifi_ssid_text, wifi_pass_text;
@@ -133,7 +122,7 @@ void sendTestPub(Control *sender, int type) {
 	Serial.println(sender->value);
 	String message = ESPUI.getControl(test_message_test)->value;
 	std::string msgStr = message.c_str();
-	broker.publish("test/topic", msgStr, 0, false);
+	getBroker().publish("test/topic", msgStr, 0, false);
 
 }
 

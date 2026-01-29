@@ -3,7 +3,13 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <sMQTTBroker.h>
-#include <vars.h>
+#include <broker.h>
+
+// //MQTT Settings
+// const char* MQTT_CLIENT_USER = "solarpv"; // username for mqtt clients. Set your own value here.
+// const char* MQTT_CLIENT_PASSWORD = "solarpv123"; // password for mqtt clients. Set your own value here.
+
+using namespace constants;
 
 // ========== MQTT Broker class ==========
 
@@ -41,7 +47,6 @@ public:
 
 MyBroker broker;
 
-
 void setupBroker(){
     const unsigned short mqttPort=9000;
     broker.init(mqttPort);
@@ -49,4 +54,8 @@ void setupBroker(){
 
 void updateBroker(){
     broker.update();
+}
+
+sMQTTBroker& getBroker(){
+    return broker;
 }

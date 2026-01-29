@@ -1,15 +1,14 @@
 #include <Arduino.h>
-#include <vars.h>
 #include <Wire.h>
 #include <INA226.h>
 #include <RTClib.h>
-#include <WiFi.h>
-#include <bits/stdc++.h>
 #include <string>
 #include <iostream>
 #include <web_ui.cpp>
 
 using namespace std;
+
+#define DEBUG_LIGHT 2 // Pin for debug light
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
