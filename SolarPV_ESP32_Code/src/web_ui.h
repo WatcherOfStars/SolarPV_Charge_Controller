@@ -10,7 +10,7 @@
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
 namespace constants {
-    inline constexpr char* HOSTNAME = "ESPUITest";
+    inline constexpr const char* HOSTNAME = "ESPUITest";
     inline constexpr int FORCE_USE_HOTSPOT = 0;
 }
 

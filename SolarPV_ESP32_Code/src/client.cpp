@@ -7,14 +7,10 @@
 using namespace constants;
 using namespace std;
 
-
-// Empty callback function for MQTT client
-void callback(char* topic, byte* payload, unsigned int length);
-
-
-IPAddress server(MQTT_BROKER_ADDRESS); //TODO MOVE TO .h
+// ========== MQTT Client internal instance ==========
+IPAddress server(C_MQTT_BROKER_ADDRESS); //TODO MOVE TO .h
 WiFiClient wificlient; //TODO MAY NOT WORK
-PubSubClient pub_sub_client(server, MQTT_PORT, callback, wificlient); //internal MQTT client instance
+PubSubClient pub_sub_client(server, C_MQTT_PORT, wificlient); //internal MQTT client instance
 
 
 // ========== MQTT Client manager ==========
@@ -23,14 +19,14 @@ PubSubClient pub_sub_client(server, MQTT_PORT, callback, wificlient); //internal
 
 void mqttClientManager::setupClient(){
     // Set callback to notify observers instead of empty callback
-    auto my_callback = [this](char* topic, byte* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
+    auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
     pub_sub_client.setCallback(my_callback);
 
     // Connect to the MQTT broker
-    if (pub_sub_client.connect(MQTT_CLIENT_NAME, MQTT_CLIENT_USER, MQTT_CLIENT_PASSWORD)) {
+    if (pub_sub_client.connect(CLIENT_NAME, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD)) {
         std::cout << "Connected to MQTT broker" << std::endl;
-        pub_sub_client.publish(MQTT_CLIENT_PUB,"hello world");
-        pub_sub_client.subscribe(MQTT_CLIENT_SUB);
+        pub_sub_client.publish(CLIENT_PUB,"hello world");
+        pub_sub_client.subscribe(CLIENT_SUB);
     } else {
         std::cout << "Failed to connect to MQTT broker" << std::endl;
     }

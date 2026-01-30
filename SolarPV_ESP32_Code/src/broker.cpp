@@ -33,25 +33,17 @@ bool MyBroker::onEvent(sMQTTEvent *event)
 }
 
 
-// ========== MQTT Broker manager ==========
-// Manages the internal MQTT broker instance and provides setup and update functions.
-class BrokerManager{
-private:
-    MyBroker broker;
+// Initialize the MQTT broker on the specified port.
+void BrokerManager::setupBroker(){
+    broker.init(MQTT_PORT);
+}
 
-public:
-    // Initialize the MQTT broker on the specified port.
-    void setupBroker(){
-        broker.init(MQTT_PORT);
-    }
+// Update broker, should be called in main loop.
+void BrokerManager::updateBroker(){
+    broker.update();
+}
 
-    // Update broker, should be called in main loop.
-    void updateBroker(){
-        broker.update();
-    }
-
-    // Get reference to the internal broker instance.
-    sMQTTBroker& getBroker(){
-        return broker;
-    }
-};
+// Get reference to the internal broker instance.
+sMQTTBroker& BrokerManager::getBroker(){
+    return broker;
+}

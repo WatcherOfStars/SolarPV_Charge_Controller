@@ -1,3 +1,15 @@
 {
+    "SLOW_BOOT": 0,
     
+    "MQTT_USERNAME": "solarpv",
+    "MQTT_PASSWORD": "solarpv123",
+    "MQTT_BROKER_ADDRESS": [10, 16, 204, 165],
+    "MQTT_PORT": 9000,
+
+    "HOSTNAME": "ESPUITest",
+    "FORCE_USE_HOTSPOT": 0,
+
+    "CLIENT_NAME": "SolarPVClient",
+    "CLIENT_PUB": "solarpv/esp32/pub",
+    "CLIENT_SUB": "solarpv/esp32/sub"
 }
