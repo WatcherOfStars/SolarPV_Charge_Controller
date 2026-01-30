@@ -1,6 +1,6 @@
-#include <Arduino.h>
-#include <WiFi.h>
 #include <client.h>
+
+#include <WiFi.h>
 #include <iostream>
 #include <algorithm>
 

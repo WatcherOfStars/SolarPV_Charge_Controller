@@ -1,6 +1,9 @@
 #ifndef BROKER_H
 #define BROKER_H
 
+#include <Arduino.h>
+#include <sMQTTBroker.h>
+
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
 namespace constants {
@@ -9,9 +12,11 @@ namespace constants {
     inline constexpr short MQTT_PORT = 9000; //port for mqtt broker
 }
 
-//forward declaration
-class sMQTTBroker;
-class MyBroker;
+// This class extends sMQTTBroker to implement custom event handling and should not be called outside the broker.
+class MyBroker : public sMQTTBroker{
+public:
+    bool onEvent(sMQTTEvent *event) override;
+};
 
 //broker manager class prototype
 class BrokerManager {

@@ -1,43 +1,36 @@
-#include <Arduino.h>
-#include <WiFi.h>
-#include <sMQTTBroker.h>
 #include <broker.h>
+
+#include <WiFi.h>
 
 using namespace constants;
 
-// ========== MQTT Broker class ==========
-// This class extends sMQTTBroker to implement custom event handling and should not be called outside this file.
-class MyBroker:public sMQTTBroker
+// Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
+bool MyBroker::onEvent(sMQTTEvent *event)
 {
-public:
-    // Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
-    bool onEvent(sMQTTEvent *event) override
+    switch(event->Type())
     {
-        switch(event->Type())
+    case NewClient_sMQTTEventType:
         {
-        case NewClient_sMQTTEventType:
-            {
-                sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
-                // Check username and password used for new connection
-                if ((e->Login() != MQTT_CLIENT_USER) || (e->Password() != MQTT_CLIENT_PASSWORD)) {
-                  Serial.println("Invalid username or password");  
-                  return false;
-                  }
-            };
-            break;
-        case LostConnect_sMQTTEventType:
-            WiFi.reconnect();
-            break;
-        case UnSubscribe_sMQTTEventType:
-        case Subscribe_sMQTTEventType:
-            {
-                sMQTTSubUnSubClientEvent *e=(sMQTTSubUnSubClientEvent*)event;
-            }
-            break;
+            sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
+            // Check username and password used for new connection
+            if ((e->Login() != MQTT_CLIENT_USER) || (e->Password() != MQTT_CLIENT_PASSWORD)) {
+                Serial.println("Invalid username or password");  
+                return false;
+                }
+        };
+        break;
+    case LostConnect_sMQTTEventType:
+        WiFi.reconnect();
+        break;
+    case UnSubscribe_sMQTTEventType:
+    case Subscribe_sMQTTEventType:
+        {
+            sMQTTSubUnSubClientEvent *e=(sMQTTSubUnSubClientEvent*)event;
         }
-        return true;
+        break;
     }
-};
+    return true;
+}
 
 
 // ========== MQTT Broker manager ==========

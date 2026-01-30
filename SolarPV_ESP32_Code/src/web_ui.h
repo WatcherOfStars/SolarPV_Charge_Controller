@@ -1,6 +1,7 @@
 #ifndef WEB_UI_H
 #define WEB_UI_H
 
+#include <Arduino.h>
 #include <ESPUI.h>
 #include <client.h>
 #include <vector>
@@ -32,9 +33,9 @@ public:
 //class prototype
 class WebUI : public webuiClientSubject, public mqttClientObserver {
 public:
-    void setupWeb();
+    void setupWebConn();
     void updateWeb();
-    void setUpUI();
+    void setupWebUI();
     void connectWifi();
 
     void registerObserver(webuiClientObserver* obs) override;
@@ -63,6 +64,7 @@ private:
 
     //utility prototypes
     void readStringFromEEPROM(String& buf, int baseaddress, int size);
+    
     //custom callbacks
     void enterWifiDetailsCallback(Control *sender, int type);
     void textCallback(Control *sender, int type);

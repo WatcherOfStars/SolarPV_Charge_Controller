@@ -1,6 +1,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include <Arduino.h>
 #include <vector>
 #include <PubSubClient.h>
 

@@ -1,14 +1,14 @@
-#include <Arduino.h>
+#include <web_ui.h>
+
 #include <EEPROM.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include <web_ui.h>
 
 using namespace constants;
 
 volatile bool updates = false;
 
-void WebUI::setupWeb(){
+void WebUI::setupWebConn(){
 	connectWifi();
 
 	// Display the IP address of the ESP32 (MIGHT BREAK)
@@ -21,17 +21,11 @@ void WebUI::setupWeb(){
 
 
 void WebUI::updateWeb(){
-	static long unsigned lastTime = 0;
-
-
-	if(millis() > lastTime + 500) {
-		
-		lastTime = millis();
-	}
+	
 
 }
 
-void WebUI::setUpUI(){
+void WebUI::setupWebUI(){
 	//Turn off verbose debugging
 	//ESPUI.setVerbosity(Verbosity::Quiet);
 
