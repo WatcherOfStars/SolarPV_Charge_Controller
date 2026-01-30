@@ -1,21 +1,16 @@
 #include <Arduino.h>
-#include <EEPROM.h>
 #include <WiFi.h>
-#include <ESPmDNS.h>
 #include <sMQTTBroker.h>
 #include <broker.h>
-
-// //MQTT Settings
-// const char* MQTT_CLIENT_USER = "solarpv"; // username for mqtt clients. Set your own value here.
-// const char* MQTT_CLIENT_PASSWORD = "solarpv123"; // password for mqtt clients. Set your own value here.
 
 using namespace constants;
 
 // ========== MQTT Broker class ==========
-
+// This class extends sMQTTBroker to implement custom event handling and should not be called outside this file.
 class MyBroker:public sMQTTBroker
 {
 public:
+    // Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
     bool onEvent(sMQTTEvent *event) override
     {
         switch(event->Type())
@@ -45,17 +40,25 @@ public:
 };
 
 
-MyBroker broker;
+// ========== MQTT Broker manager ==========
+// Manages the internal MQTT broker instance and provides setup and update functions.
+class BrokerManager{
+private:
+    MyBroker broker;
 
-void setupBroker(){
-    const unsigned short mqttPort=9000;
-    broker.init(mqttPort);
-}
+public:
+    // Initialize the MQTT broker on the specified port.
+    void setupBroker(){
+        broker.init(MQTT_PORT);
+    }
 
-void updateBroker(){
-    broker.update();
-}
+    // Update broker, should be called in main loop.
+    void updateBroker(){
+        broker.update();
+    }
 
-sMQTTBroker& getBroker(){
-    return broker;
-}
+    // Get reference to the internal broker instance.
+    sMQTTBroker& getBroker(){
+        return broker;
+    }
+};

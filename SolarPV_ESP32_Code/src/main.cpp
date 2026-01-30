@@ -4,11 +4,12 @@
 #include <RTClib.h>
 #include <string>
 #include <iostream>
-#include <web_ui.cpp>
+#include <broker.h>
+#include <main.h>
 
 using namespace std;
+using namespace constants;
 
-#define DEBUG_LIGHT 2 // Pin for debug light
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
@@ -29,6 +30,21 @@ float current = 0;
 float power = 0;
 float temperature = 0;
 
+void mainEventHandler::notifyMQTT(char* topic, char* message) {
+    // Handle MQTT notifications here
+}
+
+void mainEventHandler::notifyWebUI(char* topic, char* message) {
+    // Handle WebUI notifications here
+}
+
+
+// Create global objects
+BrokerManager broker; // Create BrokerManager object
+WebUI webUI; // Create WebUI object
+mqttClientManager client; // Create ClientManager object
+mainEventHandler eventHandler; // Create main event handler object
+
 
 void setup(){
   // Start serial communication for debugging
@@ -37,8 +53,13 @@ void setup(){
 	if(SLOW_BOOT) delay(5000); //Delay booting to give time to connect a serial monitor
 
   //start web ui and MQTT broker
-  setupWeb();
-  setUpUI();
+  webUI.setupWeb();
+  webUI.setUpUI();
+  broker.setupBroker();
+  client.setupClient();
+
+  //register observers
+  client.registerObserver(&webUI);
   
 
   // Initialize I2C
@@ -207,7 +228,29 @@ void loop() {
   // Serial.println("Publishing Data...");
   // publish over MQTT every 60 seconds
   // publish to web interface every 60 seconds
-  updateWeb();
+  webUI.updateWeb();
+  broker.updateBroker();
+  client.updateClient();
+
+  //Simple debug UART interface
+	if(Serial.available()) {
+		switch(Serial.read()) {
+			case 'w': //Print IP details
+				Serial.println(WiFi.localIP());
+				break;
+			case 'W': //Reconnect wifi
+				webUI.connectWifi();
+				break;
+			case 'C': //Force a crash (for testing exception decoder)
+				#if !defined(ESP32)
+					((void (*)())0xf00fdead)();
+				#endif
+				break;
+			default:
+				Serial.print('#');
+				break;
+		}
+	}
 
   
   // Flash debug light to indicate loop completion
@@ -218,6 +261,7 @@ void loop() {
   Serial.println("Main Loop Done!");
   delay(1800); // Wait for 2 seconds before the next reading
 }
+
 
 
 
