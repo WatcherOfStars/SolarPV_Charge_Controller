@@ -1,67 +1,19 @@
-#include<sMQTTBroker.h>
 #include<Arduino.h>
-
-
-const char* MQTT_CLIENT_USER = "solarpv"; // username for mqtt clients. Set your own value here.
-const char* MQTT_CLIENT_PASSWORD = "solarpv123"; // password for mqtt clients. Set your own value here.
-
-
-class MyBroker:public sMQTTBroker
-{
-public:
-    bool onEvent(sMQTTEvent *event) override
-    {
-        switch(event->Type())
-        {
-        case NewClient_sMQTTEventType:
-            {
-                sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
-                // Check username and password used for new connection
-                if ((e->Login() != MQTT_CLIENT_USER) || (e->Password() != MQTT_CLIENT_PASSWORD)) {
-                  Serial.println("Invalid username or password");  
-                  return false;
-                  }
-            };
-            break;
-        case LostConnect_sMQTTEventType:
-            WiFi.reconnect();
-            break;
-        case UnSubscribe_sMQTTEventType:
-        case Subscribe_sMQTTEventType:
-            {
-                sMQTTSubUnSubClientEvent *e=(sMQTTSubUnSubClientEvent*)event;
-            }
-            break;
-        }
-        return true;
-    }
-};
-
-
-MyBroker broker;
+#define light 2
+#define switch 0
 
 
 
-void setup()
-{
+void setup(){
     Serial.begin(115200);
-      // Set up Wi-Fi in Access Point mode
-    WiFi.softAP("SolarPV_esp32", "solarpv123");  // Replace with your SSID and password
+    pinMode(light, OUTPUT);
+    pinMode(switch, OUTPUT);
 
-
-    // Display the IP address of the ESP32
-    IPAddress IP = WiFi.softAPIP();
-    Serial.print("AP IP address: ");
-    Serial.println(IP);
-   
-    const unsigned short mqttPort=9000;
-    broker.init(mqttPort);
-    // all done
-    // your magic code
-
-};
-void loop()
-{
-    broker.update();
-    // your code here
-};
+}
+void loop(){
+    digitalWrite(light, HIGH);
+    digitalWrite(switch, HIGH);
+    delay(10000);
+    digitalWrite(light, LOW);
+    digitalWrite(switch, LOW);
+}
