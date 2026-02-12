@@ -7,49 +7,82 @@
 using namespace constants;
 using namespace std;
 
-// ========== MQTT Client internal instance ==========
-IPAddress server(C_MQTT_BROKER_ADDRESS); //TODO MOVE TO .h
-WiFiClient wificlient; //TODO MAY NOT WORK
-PubSubClient pub_sub_client(server, C_MQTT_PORT, wificlient); //internal MQTT client instance
 
 
 // ========== MQTT Client manager ==========
+ESP32MQTTClient mqttClient; // all params are set later
 // Manages the internal MQTT client instance and provides setup and update functions.
-// virtual ~mqttClientManager() noexcept = default;
 
-void mqttClientManager::setupClient(){
+void mqttClientManager::setupClient(){ //Client &set_client
     // Set callback to notify observers instead of empty callback
-    auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
-    pub_sub_client.setCallback(my_callback);
+    //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
-    // Connect to the MQTT broker
-    if (pub_sub_client.connect(CLIENT_NAME, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD)) {
-        std::cout << "Connected to MQTT broker" << std::endl;
-        pub_sub_client.publish(CLIENT_PUB,"hello world");
-        pub_sub_client.subscribe(CLIENT_SUB);
-    } else {
-        std::cout << "Failed to connect to MQTT broker" << std::endl;
-    }
+    mqttClient.enableDebuggingMessages();
+    mqttClient.setMqttClientName("mqtt-explorer-f361b95c");
+
+    //std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << ":" << C_MQTT_PORT << std::endl;
+    //std::cout << "Using client name: " << CLIENT_NAME << std::endl;
+    //std::cout << "Using username: " << C_MQTT_CLIENT_USER << std::endl;
+    //std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
+
+    std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << std::endl;
+
+    mqttClient.setURI(C_MQTT_BROKER_ADDRESS, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD);
+    mqttClient.enableLastWillMessage("lwt", "I am going offline");
+    mqttClient.setKeepAlive(30);
+    mqttClient.setOnMessageCallback([this](const std::string &topic, const std::string &payload) {
+        notifyObservers((char*)topic.c_str(), (char*)payload.c_str());
+    });
+
+    mqttClient.loopStart();
 }
 
 void mqttClientManager::updateClient(){
     // Update MQTT client here
-    pub_sub_client.loop();
 }
 
-PubSubClient* mqttClientManager::getClient(){
+ESP32MQTTClient* mqttClientManager::getClient(){
     // Return reference to internal client object here
-    return &pub_sub_client;
+    return &mqttClient;
 }
+
+void onMqttConnect(esp_mqtt_client_handle_t client)
+{
+    if (mqttClient.isMyTurn(client)) // can be omitted if only one client
+    {
+        mqttClient.subscribe("test", [](const std::string &payload)
+                             { log_i("%s: %s", subscribeTopic, payload.c_str()); });
+
+        mqttClient.subscribe("bar/#", [](const std::string &topic, const std::string &payload)
+                             { log_i("%s: %s", topic.c_str(), payload.c_str()); });
+    }
+}
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+esp_err_t handleMQTT(esp_mqtt_event_handle_t event)
+{
+    mqttClient.onEventCallback(event);
+    return ESP_OK;
+}
+#else  // IDF CHECK
+void handleMQTT(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+{
+    auto *event = static_cast<esp_mqtt_event_handle_t>(event_data);
+    mqttClient.onEventCallback(event);
+}
+#endif // // IDF CHECK
 
 // Observer pattern methods
 void mqttClientManager::registerObserver(mqttClientObserver* obs) {
+    std::cout << "Registering MQTT Client Observer " << obs << std::endl;
     observers.push_back(obs);
 }
 void mqttClientManager::removeObserver(mqttClientObserver* obs) {
     observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
 void mqttClientManager::notifyObservers(char* topic, char* message) {
+    std::cout << "Notifying MQTT Client Observers for topic: " << topic << std::endl;
+    std::cout << "Message: " << message << std::endl;   
     for (auto& obs : observers) {
         obs->notifyMQTT(topic, message);
     }

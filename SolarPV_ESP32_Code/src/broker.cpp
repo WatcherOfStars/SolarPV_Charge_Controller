@@ -1,8 +1,11 @@
 #include <broker.h>
 
 #include <WiFi.h>
+#include <iostream>
+#include <algorithm>
 
 using namespace constants;
+using namespace std;
 
 // Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
 bool MyBroker::onEvent(sMQTTEvent *event)
@@ -36,11 +39,13 @@ bool MyBroker::onEvent(sMQTTEvent *event)
 // Initialize the MQTT broker on the specified port.
 void BrokerManager::setupBroker(){
     broker.init(MQTT_PORT);
+    std::cout << "MQTT Broker initialized on port " << MQTT_PORT << std::endl;
 }
 
 // Update broker, should be called in main loop.
 void BrokerManager::updateBroker(){
     broker.update();
+    //std::cout << "MQTT Broker updated on port " << MQTT_PORT << std::endl;
 }
 
 // Get reference to the internal broker instance.

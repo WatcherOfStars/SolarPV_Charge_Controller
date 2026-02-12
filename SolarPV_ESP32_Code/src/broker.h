@@ -9,10 +9,10 @@
 namespace constants {
     inline constexpr const char* MQTT_CLIENT_USER = "solarpv"; //username for mqtt clients
     inline constexpr const char* MQTT_CLIENT_PASSWORD = "solarpv123"; //password for mqtt clients
-    inline constexpr const short MQTT_PORT = 9000; //port for mqtt broker
+    inline constexpr const short MQTT_PORT = 1883; //port for mqtt broker
 }
 
-// This class extends sMQTTBroker to implement custom event handling and should not be called outside the broker.
+// // This class extends sMQTTBroker to implement custom event handling and should not be called outside the broker.
 class MyBroker : public sMQTTBroker{
 public:
     bool onEvent(sMQTTEvent *event) override;

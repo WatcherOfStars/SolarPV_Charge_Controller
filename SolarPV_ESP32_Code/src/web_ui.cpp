@@ -3,8 +3,11 @@
 #include <EEPROM.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <iostream>
+#include <algorithm>
 
 using namespace constants;
+using namespace std;
 
 volatile bool updates = false;
 
@@ -46,13 +49,15 @@ void WebUI::setupWebUI(){
 	auto my_getTimeCallback = [this](Control *sender, int type) { this->getTimeCallback(sender, type); };
 	auto my_textCallback = [this](Control *sender, int type) { this->textCallback(sender, type); };
 	auto my_enterWifiDetailsCallback = [this](Control *sender, int type) { this->enterWifiDetailsCallback(sender, type); };
+	auto my_updateObserversCallback = [this](Control *sender, int type) { this->updateObserversCallback(sender, type); };
+	auto my_startClientCallback = [this](Control *sender, int type) { this->startClientCallback(sender, type); };
 
 	//buttons
-	auto button_group = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, [this](Control *sender, int type) { this->sendTestPub(sender, type); });
-	ESPUI.addControl(Button, "", "Button B", Wetasphalt, button_group, my_generalCallback);
-	ESPUI.addControl(Button, "", "Button C", Wetasphalt, button_group, my_generalCallback);
+	send_test_pub_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
+	send_test_to_subjects_button = ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, send_test_pub_button, my_updateObserversCallback);
+	start_client_button = ESPUI.addControl(Button, "", "Start Client", Wetasphalt, send_test_pub_button, my_startClientCallback);
 
-	test_message_test = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, [this](Control *sender, int type) { this->generalCallback(sender, type); });
+	test_message_test = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 
 	mainSwitcher = ESPUI.addControl(Switcher, "Switcher", "", Wetasphalt, maintab, my_generalCallback);
@@ -140,8 +145,21 @@ void WebUI::sendTestPub(Control *sender, int type) {
 	Serial.println(sender->value);
 	String message = ESPUI.getControl(test_message_test)->value;
 	std::string msgStr = message.c_str();
-	//getBroker().publish("test/topic", msgStr, 0, false); TODO FIX
+	broker->getBroker().publish("test/topic", msgStr, 0, false);
 
+}
+
+//Send test data callback
+void WebUI::startClientCallback(Control *sender, int type) {
+	Serial.print("CB: id(");
+	Serial.print(sender->id);
+	Serial.print(") Type(");
+	Serial.print(type);
+	Serial.print(") '");
+	Serial.print(sender->label);
+	Serial.print("' = ");
+	Serial.println(sender->value);
+	notifyObservers("start_client", "true");
 }
 
 //Most elements in this test UI are assigned this generic callback which prints some
@@ -262,14 +280,34 @@ void WebUI::textCallback(Control *sender, int type) {
 	//This callback is needed to handle the changed values, even though it doesn't do anything itself.
 }
 
+// Notify observers callback
+void WebUI::updateObserversCallback(Control *sender, int type) {
+	Serial.print("CB: id(");
+	Serial.print(sender->id);
+	Serial.print(") Type(");
+	Serial.print(type);
+	Serial.print(") '");
+	Serial.print(sender->label);
+	Serial.print("' = ");
+	Serial.println(sender->value);
+
+	String message = ESPUI.getControl(test_message_test)->value;
+	std::string msgStr = message.c_str();
+	// Notify all observers with the message
+	notifyObservers("test/topic", (char*)msgStr.c_str());
+}
+
 // WebUI Subject implementation
 void WebUI::registerObserver(webuiClientObserver* obs) {
+	std::cout << "Registering WebUI Observer " << obs << std::endl;
 	observers.push_back(obs);
 }
 void WebUI::removeObserver(webuiClientObserver* obs) {
 	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
 void WebUI::notifyObservers(char* topic, char* message) {
+	std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
+	std::cout << "Message: " << message << std::endl;
 	for (auto& obs : observers) {
 		obs->notifyWebUI(topic, message);
 	}

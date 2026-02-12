@@ -12,18 +12,31 @@ using namespace constants;
 // Event handler methods
 void mainEventHandler::notifyMQTT(char* topic, char* message) {
     // Handle MQTT notifications here
+    std::cout << "Received MQTT notification for topic: " << topic << ", message: " << message << std::endl;
 }
 
 void mainEventHandler::notifyWebUI(char* topic, char* message) {
     // Handle WebUI notifications here
+    std::cout << "Received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
+    if (strcmp(topic, "test/topic") == 0) {
+        // Example: If the topic is "test/topic", print the message
+        std::cout << "Handling test/topic with message: " << message << std::endl;
+    }
+    if (strcmp(topic, "start_client") == 0) {
+        // Example: If the topic is "start_client", perform some action
+        std::cout << "Handling start_client with message: " << message << std::endl;
+        if (strcmp(message, "true") == 0) {
+            // Start the MQTT client or perform some related action
+            std::cout << "Starting MQTT client..." << std::endl;
+            client.setupClient();
+        }
+    }
 }
 
 
 // Create global objects
-SystemManager sys; // Create System object
+//SystemManager sys; // Create System object
 BrokerManager broker; // Create BrokerManager object
-WebUI webUI; // Create WebUI object
-mqttClientManager client; // Create ClientManager object
 mainEventHandler eventHandler; // Create main event handler object
 
 
@@ -38,16 +51,25 @@ void setup(){
 
   // Setup system
   Serial.println("Setting up system...");
-  sys.setupSystem();
+  //sys.setupSystem();
 
   //start web ui and MQTT broker
-  Serial.println("Setting up Web UI and MQTT...");
+  Serial.println("Setting up web connection...");
   webUI.setupWebConn();
+  Serial.println("Setting up Web UI");
   webUI.setupWebUI();
+  Serial.println("Setting up mqtt broker...");
   broker.setupBroker();
-  client.setupClient();
+  Serial.println("Setting up mqtt client...");
+  webUI.setBroker(&broker);
+
+  // webUI.updateWeb();
+  // broker.updateBroker();
+
+  //client.setupClient();
 
   //register observers
+  Serial.println("Registering observers...");
   client.registerObserver(&webUI);
   client.registerObserver(&eventHandler);
   webUI.registerObserver(&eventHandler);
@@ -61,12 +83,14 @@ void setup(){
 static long unsigned lastTime = 0;
 
 void loop() {
-  Serial.println("Starting Main Loop...");
 
   //##### UPDATE SYSTEM #####
-	if(millis() > lastTime + 500) {
-		sys.updateSystem();
+	if(millis() > lastTime + 5000) {
+    //Serial.println("Starting Sys Loop...");
+
+		//sys.updateSystem();
 		lastTime = millis();
+    //Serial.println("Sys Loop Done!");
 	}
 
   //##### UPDATE WEB AND BROKER #####
@@ -93,8 +117,7 @@ void loop() {
 				break;
 		}
 	}
-
-  Serial.println("Main Loop Done!");
+  delay(10); //Small delay to prevent watchdog timer reset, adjust as needed
 }
 
 

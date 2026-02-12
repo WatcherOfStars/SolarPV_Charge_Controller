@@ -13,7 +13,8 @@ namespace constants {
     inline constexpr int DEBUG_LIGHT = 2; // Pin for debug light
 }
 
-//function prototypes
+WebUI webUI; // Create WebUI object
+mqttClientManager client; // Create ClientManager object
 
 //class definitions
 class mainEventHandler : public webuiClientObserver, public mqttClientObserver {
