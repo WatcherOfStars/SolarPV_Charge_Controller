@@ -18,7 +18,7 @@ void mqttClientManager::setupClient(){ //Client &set_client
     //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
     mqttClient.enableDebuggingMessages();
-    mqttClient.setMqttClientName("mqtt-explorer-f361b95c");
+    mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str());
 
     //std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << ":" << C_MQTT_PORT << std::endl;
     //std::cout << "Using client name: " << CLIENT_NAME << std::endl;
@@ -26,6 +26,9 @@ void mqttClientManager::setupClient(){ //Client &set_client
     //std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
 
     std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << std::endl;
+    std::cout << "Using username: " << C_MQTT_CLIENT_USER << std::endl;
+    std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
+    std::cout << "Using client name: " << mqttClient.getClientName() << std::endl;
 
     mqttClient.setURI(C_MQTT_BROKER_ADDRESS, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD);
     mqttClient.enableLastWillMessage("lwt", "I am going offline");
@@ -50,10 +53,10 @@ void onMqttConnect(esp_mqtt_client_handle_t client)
 {
     if (mqttClient.isMyTurn(client)) // can be omitted if only one client
     {
-        mqttClient.subscribe("test", [](const std::string &payload)
+        mqttClient.subscribe("test/topic", [](const std::string &payload)
                              { log_i("%s: %s", subscribeTopic, payload.c_str()); });
 
-        mqttClient.subscribe("bar/#", [](const std::string &topic, const std::string &payload)
+        mqttClient.subscribe(CLIENT_SUB, [](const std::string &topic, const std::string &payload)
                              { log_i("%s: %s", topic.c_str(), payload.c_str()); });
     }
 }
