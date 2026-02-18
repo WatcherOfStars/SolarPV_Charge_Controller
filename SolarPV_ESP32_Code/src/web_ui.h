@@ -58,16 +58,10 @@ private:
     uint16_t wifi_ssid_text, wifi_pass_text;
     uint16_t send_test_pub_button, send_test_to_subjects_button, start_client_button;
     uint16_t mainLabel, mainSwitcher, mainSlider, test_message_test, mainNumber, mainScrambleButton, mainTime;
-    uint16_t styleButton, styleLabel, styleSwitcher, styleSlider, styleButton2, styleLabel2, styleSlider2;
-    uint16_t graph;
 
     // prototypes
     void generalCallback(Control *sender, int type);
-    void updateCallback(Control *sender, int type);
     void getTimeCallback(Control *sender, int type);
-    void graphAddCallback(Control *sender, int type);
-    void graphClearCallback(Control *sender, int type);
-    void extendedCallback(Control* sender, int type, void* param);
     void updateObserversCallback(Control *sender, int type);
     void startClientCallback(Control *sender, int type);
 

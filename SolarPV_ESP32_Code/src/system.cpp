@@ -3,11 +3,16 @@
 #include <INA226.h>
 #include <RTClib.h>
 #include <Wire.h>
+#include <algorithm>
+#include <iostream>
+#include <LTC6802.h>
 
 using namespace constants;
+using namespace std;
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
+static LTC6802 bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // create battery management system object
 
 // Current state
 float busVoltage = 0;
@@ -21,22 +26,24 @@ void SystemManager::setupSystem() {
     Wire.begin(); 
 
     // Setup pins
+    pinMode(BMS_CLK_PIN, OUTPUT);
+    pinMode(BMS_MOSI_PIN, OUTPUT);
+    pinMode(BMS_MISO_PIN, INPUT);
+    pinMode(BMS_CS_PIN, OUTPUT);
 
+    pinMode(RESTART_PIN, OUTPUT);
+    pinMode(SOLAR_FET_PIN, OUTPUT);
+    pinMode(LOAD_FET_PIN, OUTPUT);
+    pinMode(FAN_PIN, OUTPUT);
 
-    // Check for ina226 shunt
-    if (!ina.begin()) {
-        Serial.println("INA226 not found!");
-        while (1);
-    }
-    // Configure the INA226 (e.g., calibration, averaging)
-    ina.setMaxCurrentShunt(20, 3.7); //20A max current 1 ohm resistance
-    ina.setAverage(4); // Set averaging to 4 samples
+    
+    // Setup (-1 error, 0 not attempted, 1 success)
+    ina226Status = setupINA226();
+    rtcStatus = setupRTC();
+    bmsStatus = setupBMS();
 
-    // Check for real time clock
-    if (! rtc.begin()) {
-        Serial.println("Couldn't find RTC");
-        while (1); // Halt if RTC is not found
-    }
+    std::cout << "System setup complete. INA226 status: " << ina226Status << ", RTC status: " << rtcStatus << ", BMS status: " << bmsStatus << std::endl;
+
 
     // Configure rtc
     // Uncomment the following line to set the RTC to the compile time
@@ -59,26 +66,78 @@ void SystemManager::setupSystem() {
     // Calculate max discharge tribble based on cell count
 }
 
+// SETUP FUNCTIONS
+int SystemManager::setupRTC() {
+    if(!flags.ENABLE_RTC) {
+        return 0; // RTC setup not attempted
+    }
+
+    // Check for real time clock
+    if (! rtc.begin()) {
+        Serial.println("Couldn't find RTC");
+        return -1; // Return an error code if RTC is not found
+    }
+    return 1; // Return success code
+}
+
+int SystemManager::setupINA226() {
+    if (!flags.ENABLE_INA226) {
+        return 0; // INA226 setup not attempted
+    }
+
+    // Check for ina226 shunt
+    if (!ina.begin()) {
+        Serial.println("INA226 not found!");
+        return -1; // Return an error code if INA226 is not found
+    }
+
+    // Configure the INA226 (e.g., calibration, averaging)
+    ina.setMaxCurrentShunt(MAX_CURRENT, SHUNT_RESISTANCE);
+    ina.setAverage(4); // Set averaging to 4 samples
+    return 1; // Return success code
+}
+
+// sets up the battery management system
+int SystemManager::setupBMS(){
+    //bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // Initialize the BMS object with the I2C address and Wire instance
+    LTC6802::initSPI(BMS_MOSI_PIN, BMS_MISO_PIN, BMS_CLK_PIN); // Initialize the SPI bus for the BMS
+    bms.cfgRead();         // Read configuration from chip
+    bms.cfgSetCDC(1);      // Measure mode 13ms
+    bms.cfgSetMCI(0x0fff); // Disable interrupts
+    bms.cfgWrite(false);   // Write configuration back to chip
+    Serial.println("Initialized chip");
+    
+    return 1; // Return success code
+}
+
 void SystemManager::updateSystem() {
-    Serial.println("Updating System...");
+    //Serial.println("Updating System...");
     //##### SAFETY CHECKS #####
     // Serial.println("Performing Safety Checks...");
     // perform safety checks before executing main tasks
-    performSafetyChecks();
+    //performSafetyChecks();
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
     // get data from INA226
-    getShuntData();
+    if(ina226Status == 1) {
+        getShuntData();
+    }
 
     // get data from RTC
-    getRTCData();
+    if(rtcStatus == 1) {
+        getRTCData();
+    }
 
     // update BMS depending on even or odd day
-    updateBMS();
+    if(bmsStatus == 1) {
+        updateBMS();
+    }
 
     // get data from BMS
-    getBMSData();
+    if(bmsStatus == 1) {
+        getBMSData();
+    }
 
     //##### UPDATE ARRAYS AND CALCULATIONS ##### (may want to move some to initialization)
     // Serial.println("Updateing Data...");
@@ -157,24 +216,69 @@ void SystemManager::getRTCData(){
     Serial.println();
 }
 
-// sets up the battery management system
-void SystemManager::setupBMS(){
-    // Placeholder for BMS setup logic
-}
+
 
 // updates the battery management system depending if it's an even or odd day
 void SystemManager::updateBMS() {
-    // Placeholder for BMS update logic
+    bms.cfgWrite(false);          // Write configuration back to chip, because chip resets these every 2.5s when nothing happens on SPI
+    bms.temperatureMeasure();     // Measure temperatures on chip
+    bms.temperatureRead();        // Read temperatures from chip
+    bms.temperatureDebugOutput(); // Send temperatures to serial
+    bms.cellsMeasure();           // Measure cell voltages on chip
+    bms.cellsRead();              // Read cell voltages from chip
+    bms.cellsDebugOutput();       // Send cell voltages to serial
 }
 
 // gets cell voltages and temperatures from the BMS
 void SystemManager::getBMSData(){
     // Placeholder for BMS data retrieval logic
+    updateBMS(); // TEMPORARY!
 }
 
-void SystemManager::performSafetyChecks(){
+int SystemManager::performSafetyChecks(){
     // Check overcurrent
     // Check if battery voltages are within safe limits
     // Check temperatures
     // Check component statuses
+    return 1;
+}
+
+void SystemManager::solarFETControl(bool state){
+    digitalWrite(SOLAR_FET_PIN, state ? HIGH : LOW);
+}
+
+void SystemManager::loadFETControl(bool state){
+    digitalWrite(LOAD_FET_PIN, state ? HIGH : LOW);
+}
+
+void SystemManager::fanControl(bool state){
+    digitalWrite(FAN_PIN, state ? HIGH : LOW);
+}
+
+void SystemManager::notifyWebUI(char* topic, char* message) {
+    // Handle WebUI notifications here
+    std::cout << "Sys received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
+    if (strcmp(topic, "test/topic") == 0) {
+        // Example: If the topic is "test/topic", print the message
+        std::cout << "Handling test/topic with message: " << message << std::endl;
+    }
+
+    if (strcmp(topic, "Enable_Solar_FETs") == 0) {
+        std::cout << "Handling Enable_Solar_FETs with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) {
+            solarFETControl(true);
+        } else if (strcmp(message, "0") == 0) {
+            solarFETControl(false);
+        }
+    }
+    
+    // if (strcmp(topic, "start_client") == 0) {
+    //     // Example: If the topic is "start_client", perform some action
+    //     std::cout << "Handling start_client with message: " << message << std::endl;
+    //     if (strcmp(message, "true") == 0) {
+    //         // Start the MQTT client or perform some related action
+    //         std::cout << "Starting MQTT client..." << std::endl;
+    //         client.setupClient();
+    //     }
+    // }
 }

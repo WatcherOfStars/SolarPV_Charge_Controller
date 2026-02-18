@@ -18,30 +18,24 @@ void mqttClientManager::setupClient(){ //Client &set_client
     //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
     mqttClient.enableDebuggingMessages();
-    mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str());
-
-    //std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << ":" << C_MQTT_PORT << std::endl;
-    //std::cout << "Using client name: " << CLIENT_NAME << std::endl;
-    //std::cout << "Using username: " << C_MQTT_CLIENT_USER << std::endl;
-    //std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
+    mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str()); // set client name to something unique using the MAC address
 
     std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << std::endl;
     std::cout << "Using username: " << C_MQTT_CLIENT_USER << std::endl;
     std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
     std::cout << "Using client name: " << mqttClient.getClientName() << std::endl;
 
-    mqttClient.setURI(C_MQTT_BROKER_ADDRESS, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD);
+    mqttClient.setURI(C_MQTT_BROKER_ADDRESS, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD); // set broker address and credentials
     mqttClient.enableLastWillMessage("lwt", "I am going offline");
     mqttClient.setKeepAlive(30);
-    mqttClient.setOnMessageCallback([this](const std::string &topic, const std::string &payload) {
+    // mqttClient.subscribe(CLIENT_SUB, [this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
+    //     this->notifyObservers((char*)topic.c_str(), (char*)payload.c_str());
+    // });
+    mqttClient.setOnMessageCallback([this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
         notifyObservers((char*)topic.c_str(), (char*)payload.c_str());
     });
 
     mqttClient.loopStart();
-}
-
-void mqttClientManager::updateClient(){
-    // Update MQTT client here
 }
 
 ESP32MQTTClient* mqttClientManager::getClient(){
@@ -49,14 +43,23 @@ ESP32MQTTClient* mqttClientManager::getClient(){
     return &mqttClient;
 }
 
+void mqttClientManager::subscribeToTopic(const char* topic){
+    mqttClient.subscribe(topic, [this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
+        this->notifyObservers((char*)topic.c_str(), (char*)payload.c_str());
+    });
+}
+
+void mqttClientManager::publishToTopic(const char* topic, const char* message){
+    mqttClient.publish(topic, message);
+}
+
+// for testing purposes, subscribe to a topic on connect and print received messages to serial
 void onMqttConnect(esp_mqtt_client_handle_t client)
 {
     if (mqttClient.isMyTurn(client)) // can be omitted if only one client
     {
-        mqttClient.subscribe("test/topic", [](const std::string &payload)
-                             { log_i("%s: %s", subscribeTopic, payload.c_str()); });
-
-        mqttClient.subscribe(CLIENT_SUB, [](const std::string &topic, const std::string &payload)
+        std::cout << "MQTT client connected! Subscribed to topic: " << constants::CLIENT_SUB << std::endl;
+        mqttClient.subscribe(constants::CLIENT_SUB, [](const std::string &topic, const std::string &payload)
                              { log_i("%s: %s", topic.c_str(), payload.c_str()); });
     }
 }

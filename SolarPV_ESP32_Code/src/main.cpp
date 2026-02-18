@@ -12,12 +12,12 @@ using namespace constants;
 // Event handler methods
 void mainEventHandler::notifyMQTT(char* topic, char* message) {
     // Handle MQTT notifications here
-    std::cout << "Received MQTT notification for topic: " << topic << ", message: " << message << std::endl;
+    std::cout << "Main received MQTT notification for topic: " << topic << ", message: " << message << std::endl;
 }
 
 void mainEventHandler::notifyWebUI(char* topic, char* message) {
     // Handle WebUI notifications here
-    std::cout << "Received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
+    std::cout << "Main received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
     if (strcmp(topic, "test/topic") == 0) {
         // Example: If the topic is "test/topic", print the message
         std::cout << "Handling test/topic with message: " << message << std::endl;
@@ -35,7 +35,7 @@ void mainEventHandler::notifyWebUI(char* topic, char* message) {
 
 
 // Create global objects
-//SystemManager sys; // Create System object
+SystemManager sys; // Create System object
 BrokerManager broker; // Create BrokerManager object
 mainEventHandler eventHandler; // Create main event handler object
 
@@ -51,7 +51,7 @@ void setup(){
 
   // Setup system
   Serial.println("Setting up system...");
-  //sys.setupSystem();
+  sys.setupSystem();
 
   //start web ui and MQTT broker
   Serial.println("Setting up web connection...");
@@ -73,6 +73,7 @@ void setup(){
   client.registerObserver(&webUI);
   client.registerObserver(&eventHandler);
   webUI.registerObserver(&eventHandler);
+  webUI.registerObserver(&sys);
   
 
   Serial.println("System Booted");
@@ -86,9 +87,9 @@ void loop() {
 
   //##### UPDATE SYSTEM #####
 	if(millis() > lastTime + 5000) {
-    //Serial.println("Starting Sys Loop...");
+    Serial.println("Starting Sys Loop...");
 
-		//sys.updateSystem();
+		sys.updateSystem();
 		lastTime = millis();
     //Serial.println("Sys Loop Done!");
 	}
@@ -96,7 +97,6 @@ void loop() {
   //##### UPDATE WEB AND BROKER #####
   webUI.updateWeb();
   broker.updateBroker();
-  client.updateClient();
 
   //##### UART SERIAL INTERFACE #####
 	if(Serial.available()) {
@@ -117,7 +117,7 @@ void loop() {
 				break;
 		}
 	}
-  delay(10); //Small delay to prevent watchdog timer reset, adjust as needed
+  delay(10); //Small delay to prevent watchdog timer reset
 }
 
 

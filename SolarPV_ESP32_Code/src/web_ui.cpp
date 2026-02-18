@@ -60,7 +60,16 @@ void WebUI::setupWebUI(){
 	test_message_test = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 
-	mainSwitcher = ESPUI.addControl(Switcher, "Switcher", "", Wetasphalt, maintab, my_generalCallback);
+	mainSwitcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "Toggle_Solar_FETs", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Toggle_Load_FETs", "Toggle_Load_FETs", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Toggle_Fan", "Toggle_Fan", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Separator, "System Flags", "", None, maintab);
+	ESPUI.addControl(Switcher, "Enable_BMS", "Enable_BMS", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Enable_RTC", "Enable_RTC", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Enable_Solar_FETs", "Enable_Solar_FETs", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Enable_Load_FETs", "Enable_Load_FETs", Wetasphalt, maintab, my_updateObserversCallback);	
+	ESPUI.addControl(Switcher, "Enable_FAN", "Enable_FAN", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Switcher, "Enable_INA226", "Enable_INA226", Wetasphalt, maintab, my_updateObserversCallback);
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
 	// mainSlider = ESPUI.addControl(Slider, "Slider", "200", Wetasphalt, maintab, generalCallback);
@@ -69,26 +78,26 @@ void WebUI::setupWebUI(){
 
 	//These are the values for the selector's options. (Note that they *must* be declared static
 	//so that the storage is allocated in global memory and not just on the stack of this function.)
-	static String modes[] {"Value 1", "Value 2", "Value 3", "Value 4", "Value 5"};
-	auto mode_selector = ESPUI.addControl(Select, "Selector", "Mode", Wetasphalt, maintab, my_generalCallback);
-	for(auto const& v : modes) {
-		ESPUI.addControl(Option, v.c_str(), v, None, mode_selector);
-	}
+	// static String modes[] {"Value 1", "Value 2", "Value 3", "Value 4", "Value 5"};
+	// auto mode_selector = ESPUI.addControl(Select, "Selector", "Mode", Wetasphalt, maintab, my_generalCallback);
+	// for(auto const& v : modes) {
+	// 	ESPUI.addControl(Option, v.c_str(), v, None, mode_selector);
+	// }
 
-	//Voltage selector
-	auto voltage_selector = ESPUI.addControl(Select, "", "System Voltage", Wetasphalt, mode_selector, my_generalCallback);
-	ESPUI.addControl(Option, "12V", "12V", None, voltage_selector);
-	ESPUI.addControl(Option, "24V", "24V", None, voltage_selector);
-	ESPUI.addControl(Option, "48V", "48V", None, voltage_selector);
+	// //Voltage selector
+	// auto voltage_selector = ESPUI.addControl(Select, "", "System Voltage", Wetasphalt, mode_selector, my_generalCallback);
+	// ESPUI.addControl(Option, "12V", "12V", None, voltage_selector);
+	// ESPUI.addControl(Option, "24V", "24V", None, voltage_selector);
+	// ESPUI.addControl(Option, "48V", "48V", None, voltage_selector);
 
 	//Time display
 	mainTime = ESPUI.addControl(Time, "Current Time", "", Wetasphalt, maintab, my_getTimeCallback);
 
 
 	//Number inputs also accept Min and Max components, but you should still validate the values.
-	mainNumber = ESPUI.addControl(Number, "Number Input", "42", Wetasphalt, maintab, my_generalCallback);
-	ESPUI.addControl(Min, "", "10", None, mainNumber);
-	ESPUI.addControl(Max, "", "50", None, mainNumber);
+	// mainNumber = ESPUI.addControl(Number, "Number Input", "42", Wetasphalt, maintab, my_generalCallback);
+	// ESPUI.addControl(Min, "", "10", None, mainNumber);
+	// ESPUI.addControl(Max, "", "50", None, mainNumber);
 
 
 	/*
@@ -111,25 +120,10 @@ void WebUI::setupWebUI(){
 
 
 // ========== Callbacks ==========
-// void WebUI::updateCallback(Control *sender, int type) {
-// 	updates = (sender->value.toInt() > 0);
-// }
 
 void WebUI::getTimeCallback(Control *sender, int type) {
 	if(type == B_UP) {
 		ESPUI.updateTime(mainTime);
-	}
-}
-
-void WebUI::graphAddCallback(Control *sender, int type) {
-	if(type == B_UP) {
-		ESPUI.addGraphPoint(graph, random(1, 50));
-	}
-}
-
-void WebUI::graphClearCallback(Control *sender, int type) {
-	if(type == B_UP) {
-		ESPUI.clearGraph(graph);
 	}
 }
 
@@ -173,25 +167,6 @@ void WebUI::generalCallback(Control *sender, int type) {
 	Serial.print(sender->label);
 	Serial.print("' = ");
 	Serial.println(sender->value);
-}
-
-// Most elements in this test UI are assigned this generic callback which prints some
-// basic information. Event types are defined in ESPUI.h
-// The extended param can be used to hold a pointer to additional information
-// or for C++ it can be used to return a this pointer for quick access
-// using a lambda function
-void WebUI::extendedCallback(Control* sender, int type, void* param)
-{
-	Serial.print("CB: id(");
-	Serial.print(sender->id);
-	Serial.print(") Type(");
-	Serial.print(type);
-	Serial.print(") '");
-	Serial.print(sender->label);
-	Serial.print("' = ");
-	Serial.println(sender->value);
-	Serial.print("param = ");
-	Serial.println((long)param);
 }
 
 // ========== Utility functions ==========
@@ -291,10 +266,12 @@ void WebUI::updateObserversCallback(Control *sender, int type) {
 	Serial.print("' = ");
 	Serial.println(sender->value);
 
-	String message = ESPUI.getControl(test_message_test)->value;
-	std::string msgStr = message.c_str();
+	//std::string topicStr = std::to_string(sender->id) + std::string("/") + std::to_string(type);
+	String msgStr = sender->value;
+	char* topic = (char*)sender->label;
+
 	// Notify all observers with the message
-	notifyObservers("test/topic", (char*)msgStr.c_str());
+	notifyObservers(topic, (char*)msgStr.c_str());
 }
 
 // WebUI Subject implementation

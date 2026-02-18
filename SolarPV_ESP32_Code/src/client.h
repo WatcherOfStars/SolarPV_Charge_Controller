@@ -12,7 +12,7 @@
 namespace constants {
     // device constants
     //inline constexpr const char* CLIENT_NAME = "solarpv0123"; //name for mqtt client
-    inline constexpr const char* CLIENT_SUB = "inTopic"; //sub for mqtt clients
+    inline constexpr const char* CLIENT_SUB = "test/topic"; //sub for mqtt clients
     inline constexpr const char* CLIENT_PUB = "outTopic"; //pub for mqtt clients
 
     // mqtt broker constants
@@ -46,9 +46,10 @@ private:
 
 public:
     void setupClient(); //to be called in setup
-    void updateClient(); //to be called in loop
     ESP32MQTTClient* getClient(); //returns reference to the internal client object
 
+    void subscribeToTopic(const char* topic); //subscribe to a topic, for testing purposes
+    void publishToTopic(const char* topic, const char* message); //publish a message to a topic, for testing purposes
     void registerObserver(mqttClientObserver* obs) override;
     void removeObserver(mqttClientObserver* obs) override;
     void notifyObservers(char* topic, char* message) override;
