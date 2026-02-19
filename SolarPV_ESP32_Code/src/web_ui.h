@@ -4,9 +4,9 @@
 #include <Arduino.h>
 #include <ESPUI.h>
 #include <WiFi.h>
-#include <client.h>
 #include <broker.h>
 #include <vector>
+#include "observer.h"
 
 
 //consts
@@ -16,48 +16,48 @@ namespace constants {
     inline constexpr int FORCE_USE_HOTSPOT = 0;
 }
 
-//observer and subject class prototypes
-class webuiClientObserver{ //todo: do we need aliases for topic and message types?
-public:
-    virtual void notifyWebUI(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
-    virtual ~webuiClientObserver() = default; //destructor
-};
+// //observer and subject class prototypes
+// class webuiClientObserver{ //todo: do we need aliases for topic and message types?
+// public:
+//     virtual void notifyWebUI(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
+//     virtual ~webuiClientObserver() = default; //destructor
+// };
 
-class webuiClientSubject{
-public:
-    virtual void registerObserver(webuiClientObserver* obs) = 0;
-    virtual void removeObserver(webuiClientObserver* obs) = 0;
-    virtual void notifyObservers(char* topic, char* message) = 0;
-    virtual ~webuiClientSubject() = default; //destructor
-};
+// class webuiClientSubject{
+// public:
+//     virtual void registerObserver(webuiClientObserver* obs) = 0;
+//     virtual void removeObserver(webuiClientObserver* obs) = 0;
+//     virtual void notifyObservers(char* topic, char* message) = 0;
+//     virtual ~webuiClientSubject() = default; //destructor
+// };
 
 
 //class prototype
-class WebUI : public webuiClientSubject, public mqttClientObserver {
+class WebUI : public subject, public observer {
 public:
     void setupWebConn();
-    void updateWeb();
+    void updateWebUI();
     void setupWebUI();
     void connectWifi();
     void setBroker(BrokerManager* brokerManager){
         this->broker = brokerManager;
     };
 
-    void registerObserver(webuiClientObserver* obs) override;
-    void removeObserver(webuiClientObserver* obs) override;
+    void registerObserver(observer* obs) override;
+    void removeObserver(observer* obs) override;
     void notifyObservers(char* topic, char* message) override;
 
-    void notifyMQTT(char* topic, char* message) override; //function to notify webui of incoming mqtt messages.
+    void onNotify(char* topic, char* message) override; //function to notify webui of incoming mqtt messages.
 
 
 private:
-    std::vector<webuiClientObserver*> observers;
+    std::vector<observer*> observers;
     BrokerManager* broker; //pointer to the broker manager
 
     //UI handles
     uint16_t wifi_ssid_text, wifi_pass_text;
-    uint16_t send_test_pub_button, send_test_to_subjects_button, start_client_button;
-    uint16_t mainLabel, mainSwitcher, mainSlider, test_message_test, mainNumber, mainScrambleButton, mainTime;
+    uint16_t main_button;
+    uint16_t mainSwitcher, test_message_text, mainTime;
 
     // prototypes
     void generalCallback(Control *sender, int type);

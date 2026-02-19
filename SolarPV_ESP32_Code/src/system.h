@@ -2,7 +2,7 @@
 #define SYSTEM_H
 
 #include <Arduino.h>
-#include <web_ui.h>
+#include <observer.h>
 
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
@@ -17,7 +17,7 @@ namespace constants {
     inline constexpr float MIN_CELL_TEMPERATURE = -20.0; // minimum safe temperature for a cell in degrees Celsius
     inline constexpr float MAX_PACK_VOLTAGE = NUM_CELLS * MAX_CELL_VOLTAGE; // maximum voltage for the entire battery pack
     inline constexpr float MIN_PACK_VOLTAGE = NUM_CELLS * MIN_CELL_VOLTAGE; // minimum voltage for the entire battery pack
-    inline constexpr float SHUNT_RESISTANCE = 0.1; // shunt resistance in ohms for current measurement  
+    inline constexpr float SHUNT_RESISTANCE = 0.002745; // shunt resistance in ohms for current measurement  
     inline constexpr float MAX_CURRENT = 60.0; // maximum current in amps for the system
     inline constexpr float FAN_ON_TEMPERATURE = 40.0; // temperature in degrees Celsius to turn the cooling fan on
     inline constexpr float FAN_OFF_TEMPERATURE = 35.0; // temperature in degrees Celsius to turn the cooling fan off
@@ -43,7 +43,7 @@ namespace constants {
     inline constexpr uint8_t FAN_PIN = 4; // pin to control cooling fan
 }
 
-struct Flags {
+struct Sys_Flags {
     unsigned int ENABLE_BMS : 1;
     unsigned int ENABLE_RTC : 1;
     unsigned int ENABLE_SOLAR_FETs : 1;
@@ -69,10 +69,11 @@ struct SystemData {
 };
 
 //class definitions
-class SystemManager : public webuiClientObserver {
+class SystemManager : public observer, public subject {
 private:
-    // Set flags
-    Flags flags = { 
+    std::vector<observer*> observers; //list of observers
+    // Set sys_flags
+    Sys_Flags sys_flags = { 
         ENABLE_BMS: 1, 
         ENABLE_RTC: 0, 
         ENABLE_SOLAR_FETs: 1, 
@@ -96,6 +97,12 @@ public:
     void setupSystem(); //to be called in setup
     void updateSystem(); //to be called in loop
 
+    void sendUpdatesToWebUI(); //to be called to send updates to the web UI
+
+    void registerObserver(observer* obs) override;
+    void removeObserver(observer* obs) override;
+    void notifyObservers(char* topic, char* message) override;
+
     void getShuntData(); //to be called to get shunt data
     void getRTCData(); //to be called to get RTC data
     void getBMSData(); //to be called to get BMS data
@@ -103,7 +110,7 @@ public:
     void solarFETControl(bool state); //to control solar FETs
     void loadFETControl(bool state); //to control load FETs
     void fanControl(bool state); //to control cooling fan
-    void notifyWebUI(char* topic, char* message) override;
+    void onNotify(char* topic, char* message) override;
 
 };
 

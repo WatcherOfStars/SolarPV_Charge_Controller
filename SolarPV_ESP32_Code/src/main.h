@@ -4,6 +4,16 @@
 #include <Arduino.h>
 #include <client.h>
 #include <web_ui.h>
+#include <observer.h>
+#include <broker.h>
+#include <system.h>
+
+
+// Create global objects
+SystemManager sys; // Create System object
+BrokerManager broker; // Create BrokerManager object
+WebUI webUI; // Create WebUI object
+MqttClientManager client; // Create ClientManager object
 
 
 //consts
@@ -13,16 +23,12 @@ namespace constants {
     inline constexpr int DEBUG_LIGHT = 2; // Pin for debug light
 }
 
-WebUI webUI; // Create WebUI object
-mqttClientManager client; // Create ClientManager object
-
 //class definitions
-class mainEventHandler : public webuiClientObserver, public mqttClientObserver {
+class mainEventHandler : public observer {
 private:
     // Internal state variables can be added here
 public:
-    void notifyMQTT(char* topic, char* message) override;
-    void notifyWebUI(char* topic, char* message) override;
+    void onNotify(char* topic, char* message) override;
 };
 
 #endif

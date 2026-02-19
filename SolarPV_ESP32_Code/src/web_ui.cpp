@@ -23,7 +23,7 @@ void WebUI::setupWebConn(){
 } 
 
 
-void WebUI::updateWeb(){
+void WebUI::updateWebUI(){
 	
 
 }
@@ -53,11 +53,13 @@ void WebUI::setupWebUI(){
 	auto my_startClientCallback = [this](Control *sender, int type) { this->startClientCallback(sender, type); };
 
 	//buttons
-	send_test_pub_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
-	send_test_to_subjects_button = ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, send_test_pub_button, my_updateObserversCallback);
-	start_client_button = ESPUI.addControl(Button, "", "Start Client", Wetasphalt, send_test_pub_button, my_startClientCallback);
+	main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
+	ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
+	ESPUI.addControl(Button, "", "Start Client", Wetasphalt, main_button, my_startClientCallback);
+	ESPUI.addControl(Button, "", "Restart System", Wetasphalt, main_button, my_updateObserversCallback);
 
-	test_message_test = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
+
+	test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 
 	mainSwitcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "Toggle_Solar_FETs", Wetasphalt, maintab, my_updateObserversCallback);
@@ -137,7 +139,7 @@ void WebUI::sendTestPub(Control *sender, int type) {
 	Serial.print(sender->label);
 	Serial.print("' = ");
 	Serial.println(sender->value);
-	String message = ESPUI.getControl(test_message_test)->value;
+	String message = ESPUI.getControl(test_message_text)->value;
 	std::string msgStr = message.c_str();
 	broker->getBroker().publish("test/topic", msgStr, 0, false);
 
@@ -274,26 +276,28 @@ void WebUI::updateObserversCallback(Control *sender, int type) {
 	notifyObservers(topic, (char*)msgStr.c_str());
 }
 
-// WebUI Subject implementation
-void WebUI::registerObserver(webuiClientObserver* obs) {
-	std::cout << "Registering WebUI Observer " << obs << std::endl;
-	observers.push_back(obs);
-}
-void WebUI::removeObserver(webuiClientObserver* obs) {
-	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
-}
-void WebUI::notifyObservers(char* topic, char* message) {
-	std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
-	std::cout << "Message: " << message << std::endl;
-	for (auto& obs : observers) {
-		obs->notifyWebUI(topic, message);
-	}
-}
-
-void WebUI::notifyMQTT(char* topic, char* message) {
+// WebUI Observer implementation
+void WebUI::onNotify(char* topic, char* message) {
 	//This function is called when an MQTT message is received.
 	Serial.print("WebUI received MQTT message on topic: ");
 	Serial.print(topic);
 	Serial.print(" with message: ");
 	Serial.println(message);
 }
+
+// WebUI Subject implementation
+void WebUI::registerObserver(observer* obs) {
+	std::cout << "Registering WebUI Observer " << obs << std::endl;
+	observers.push_back(obs);
+}
+void WebUI::removeObserver(observer* obs) {
+	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
+}
+void WebUI::notifyObservers(char* topic, char* message) {
+	std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
+	std::cout << "Message: " << message << std::endl;
+	for (auto& obs : observers) {
+		obs->onNotify(topic, message);
+	}
+}
+

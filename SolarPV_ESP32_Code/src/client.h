@@ -5,6 +5,7 @@
 #include <vector>
 #include "ESP32MQTTClient.h"
 #include "esp_idf_version.h" // check IDF version
+#include <observer.h>
 //#include <cstdint>
 
 //consts
@@ -24,25 +25,25 @@ namespace constants {
 }
 
 
-//observer and subject class prototypes
-class mqttClientObserver{ //todo: do we need aliases for topic and message types?
-public:
-    virtual void notifyMQTT(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
-    virtual ~mqttClientObserver() = default; //destructor
-};
+// //observer and subject class prototypes
+// class mqttClientObserver{ //todo: do we need aliases for topic and message types?
+// public:
+//     virtual void onNotify(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
+//     virtual ~mqttClientObserver() = default; //destructor
+// };
 
-class mqttClientSubject{
-public:
-    virtual void registerObserver(mqttClientObserver* obs) = 0;
-    virtual void removeObserver(mqttClientObserver* obs) = 0;
-    virtual void notifyObservers(char* topic, char* message) = 0;
-    virtual ~mqttClientSubject() = default; //destructor
-};
+// class mqttClientSubject{
+// public:
+//     virtual void registerObserver(mqttClientObserver* obs) = 0;
+//     virtual void removeObserver(mqttClientObserver* obs) = 0;
+//     virtual void notifyObservers(char* topic, char* message) = 0;
+//     virtual ~mqttClientSubject() = default; //destructor
+// };
 
 //class prototype
-class mqttClientManager : public mqttClientSubject {
+class MqttClientManager : public subject {
 private:
-    std::vector<mqttClientObserver*> observers; //list of observers
+    std::vector<observer*> observers; //list of observers
 
 public:
     void setupClient(); //to be called in setup
@@ -50,8 +51,8 @@ public:
 
     void subscribeToTopic(const char* topic); //subscribe to a topic, for testing purposes
     void publishToTopic(const char* topic, const char* message); //publish a message to a topic, for testing purposes
-    void registerObserver(mqttClientObserver* obs) override;
-    void removeObserver(mqttClientObserver* obs) override;
+    void registerObserver(observer* obs) override;
+    void removeObserver(observer* obs) override;
     void notifyObservers(char* topic, char* message) override;
 };
 

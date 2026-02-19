@@ -21,6 +21,8 @@ float current = 0;
 float power = 0;
 float temperature = 0;
 
+float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
+
 void SystemManager::setupSystem() {
     // Initialize I2C
     Wire.begin(); 
@@ -68,7 +70,7 @@ void SystemManager::setupSystem() {
 
 // SETUP FUNCTIONS
 int SystemManager::setupRTC() {
-    if(!flags.ENABLE_RTC) {
+    if(!sys_flags.ENABLE_RTC) {
         return 0; // RTC setup not attempted
     }
 
@@ -81,7 +83,7 @@ int SystemManager::setupRTC() {
 }
 
 int SystemManager::setupINA226() {
-    if (!flags.ENABLE_INA226) {
+    if (!sys_flags.ENABLE_INA226) {
         return 0; // INA226 setup not attempted
     }
 
@@ -116,6 +118,46 @@ void SystemManager::updateSystem() {
     // Serial.println("Performing Safety Checks...");
     // perform safety checks before executing main tasks
     //performSafetyChecks();
+
+    //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
+    if(sys_flags.ENABLE_BMS) {
+        if(bmsStatus != 1){
+            Serial.println("Enabling BMS...");
+            bmsStatus = setupBMS();
+        }
+    }
+    else {
+        if(bmsStatus != 0){
+            Serial.println("Disabling BMS...");
+            bmsStatus = 0;
+        }
+    }
+
+    if(sys_flags.ENABLE_RTC) {
+        if(rtcStatus != 1){
+            Serial.println("Enabling RTC...");
+            rtcStatus = setupRTC();
+        }
+    }
+    else {
+        if(rtcStatus != 0){
+            Serial.println("Disabling RTC...");
+            rtcStatus = 0;
+        }
+    }
+
+    if(sys_flags.ENABLE_INA226) {
+        if(ina226Status != 1){
+            Serial.println("Enabling INA226...");
+            ina226Status = setupINA226();
+        }
+    }
+    else {
+        if(ina226Status != 0){
+            Serial.println("Disabling INA226...");
+            ina226Status = 0;
+        }
+    }
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
@@ -167,6 +209,12 @@ void SystemManager::updateSystem() {
 
     // turn fan on or off based on temperature readings and current
 
+    //##### WEB UI UPDATES #####
+    // send updates to web UI every 5 seconds
+    if(webUITimer + 5000 < millis()) {
+        webUITimer = millis();
+        sendUpdatesToWebUI();
+    }
 }
 
 // Gets the voltage, current, and power from the INA226
@@ -255,7 +303,7 @@ void SystemManager::fanControl(bool state){
     digitalWrite(FAN_PIN, state ? HIGH : LOW);
 }
 
-void SystemManager::notifyWebUI(char* topic, char* message) {
+void SystemManager::onNotify(char* topic, char* message) {
     // Handle WebUI notifications here
     std::cout << "Sys received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
     if (strcmp(topic, "test/topic") == 0) {
@@ -263,22 +311,96 @@ void SystemManager::notifyWebUI(char* topic, char* message) {
         std::cout << "Handling test/topic with message: " << message << std::endl;
     }
 
-    if (strcmp(topic, "Enable_Solar_FETs") == 0) {
-        std::cout << "Handling Enable_Solar_FETs with message: " << message << std::endl;
-        if (strcmp(message, "1") == 0) {
-            solarFETControl(true);
-        } else if (strcmp(message, "0") == 0) {
-            solarFETControl(false);
-        }
+    // HANDLE REBOOT REQUEST
+    else if (strcmp(topic, "Restart System") == 0) {
+        std::cout << "Handling System_Reboot with message: " << message << std::endl;
+        Serial.println("Rebooting system...");
+        ESP.restart(); // Reboot the ESP32
     }
-    
-    // if (strcmp(topic, "start_client") == 0) {
-    //     // Example: If the topic is "start_client", perform some action
-    //     std::cout << "Handling start_client with message: " << message << std::endl;
-    //     if (strcmp(message, "true") == 0) {
-    //         // Start the MQTT client or perform some related action
-    //         std::cout << "Starting MQTT client..." << std::endl;
-    //         client.setupClient();
-    //     }
-    // }
+
+    // HANDLE MANUAL TOGGLES
+    else if (strcmp(topic, "Toggle_Solar_FETs") == 0) {
+        std::cout << "Handling Toggle_Solar_FETs with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) solarFETControl(true);
+        else if (strcmp(message, "0") == 0) solarFETControl(false);
+    }
+
+    else if (strcmp(topic, "Toggle_Load_FETs") == 0) {
+        std::cout << "Handling Toggle_Load_FETs with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) loadFETControl(true);
+        else if (strcmp(message, "0") == 0) loadFETControl(false);
+    }
+
+    else if (strcmp(topic, "Toggle_Fan") == 0) {
+        std::cout << "Handling Toggle_Fan with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) fanControl(true);
+        else if (strcmp(message, "0") == 0) fanControl(false);
+    }
+
+    // HANDLE FLAG TOGGLES
+
+    else if (strcmp(topic, "Enable_BMS") == 0) {
+        std::cout << "Handling Enable_BMS with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_BMS = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_BMS = 0;
+    }
+
+    else if (strcmp(topic, "Enable_RTC") == 0) {
+        std::cout << "Handling Enable_RTC with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_RTC = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_RTC = 0;
+    }
+
+    else if (strcmp(topic, "Enable_Solar_FETs") == 0) {
+        std::cout << "Handling Enable_Solar_FETs with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_SOLAR_FETs = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_SOLAR_FETs = 0;
+    }
+
+    else if (strcmp(topic, "Enable_Load_FETs") == 0) {
+        std::cout << "Handling Enable_Load_FETs with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_LOAD_FETs = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_LOAD_FETs = 0;
+    }
+
+    else if (strcmp(topic, "Enable_Fan") == 0) {
+        std::cout << "Handling Enable_Fan with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_FAN = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_FAN = 0;
+    }
+
+    else if (strcmp(topic, "Enable_INA226") == 0) {
+        std::cout << "Handling Enable_INA226 with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) sys_flags.ENABLE_INA226 = 1;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_INA226 = 0;
+    }
+}
+
+void SystemManager::sendUpdatesToWebUI(){
+    // serialize system flags into a json and send to web UI
+    std::string msgStr = "{";
+    msgStr += "\"ENABLE_BMS\":" + std::to_string(sys_flags.ENABLE_BMS) + ",";
+    msgStr += "\"ENABLE_RTC\":" + std::to_string(sys_flags.ENABLE_RTC) + ",";
+    msgStr += "\"ENABLE_SOLAR_FETs\":" + std::to_string(sys_flags.ENABLE_SOLAR_FETs) + ",";
+    msgStr += "\"ENABLE_LOAD_FETs\":" + std::to_string(sys_flags.ENABLE_LOAD_FETs) + ",";
+    msgStr += "\"ENABLE_FAN\":" + std::to_string(sys_flags.ENABLE_FAN) + ",";
+    msgStr += "\"ENABLE_INA226\":" + std::to_string(sys_flags.ENABLE_INA226);
+    msgStr += "}";
+    notifyObservers("system_update/flags", (char*)msgStr.c_str());
+}
+
+// System Subject implementation
+void SystemManager::registerObserver(observer* obs) {
+	std::cout << "Registering System Observer " << obs << std::endl;
+	observers.push_back(obs);
+}
+void SystemManager::removeObserver(observer* obs) {
+	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
+}
+void SystemManager::notifyObservers(char* topic, char* message) {
+	std::cout << "Notifying System Observers for topic: " << topic << std::endl;
+	std::cout << "Message: " << message << std::endl;
+	for (auto& obs : observers) {
+		obs->onNotify(topic, message);
+	}
 }

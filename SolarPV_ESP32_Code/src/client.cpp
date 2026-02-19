@@ -13,7 +13,7 @@ using namespace std;
 ESP32MQTTClient mqttClient; // all params are set later
 // Manages the internal MQTT client instance and provides setup and update functions.
 
-void mqttClientManager::setupClient(){ //Client &set_client
+void MqttClientManager::setupClient(){ //Client &set_client
     // Set callback to notify observers instead of empty callback
     //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
@@ -38,18 +38,18 @@ void mqttClientManager::setupClient(){ //Client &set_client
     mqttClient.loopStart();
 }
 
-ESP32MQTTClient* mqttClientManager::getClient(){
+ESP32MQTTClient* MqttClientManager::getClient(){
     // Return reference to internal client object here
     return &mqttClient;
 }
 
-void mqttClientManager::subscribeToTopic(const char* topic){
+void MqttClientManager::subscribeToTopic(const char* topic){
     mqttClient.subscribe(topic, [this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
         this->notifyObservers((char*)topic.c_str(), (char*)payload.c_str());
     });
 }
 
-void mqttClientManager::publishToTopic(const char* topic, const char* message){
+void MqttClientManager::publishToTopic(const char* topic, const char* message){
     mqttClient.publish(topic, message);
 }
 
@@ -79,17 +79,17 @@ void handleMQTT(void *handler_args, esp_event_base_t base, int32_t event_id, voi
 #endif // // IDF CHECK
 
 // Observer pattern methods
-void mqttClientManager::registerObserver(mqttClientObserver* obs) {
+void MqttClientManager::registerObserver(observer* obs) {
     std::cout << "Registering MQTT Client Observer " << obs << std::endl;
     observers.push_back(obs);
 }
-void mqttClientManager::removeObserver(mqttClientObserver* obs) {
+void MqttClientManager::removeObserver(observer* obs) {
     observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
-void mqttClientManager::notifyObservers(char* topic, char* message) {
+void MqttClientManager::notifyObservers(char* topic, char* message) {
     std::cout << "Notifying MQTT Client Observers for topic: " << topic << std::endl;
     std::cout << "Message: " << message << std::endl;   
     for (auto& obs : observers) {
-        obs->notifyMQTT(topic, message);
+        obs->onNotify(topic, message);
     }
 }

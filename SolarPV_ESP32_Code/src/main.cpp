@@ -2,20 +2,13 @@
 
 #include <string>
 #include <iostream>
-#include <broker.h>
-#include <system.h>
 
 using namespace std;
 using namespace constants;
 
 
 // Event handler methods
-void mainEventHandler::notifyMQTT(char* topic, char* message) {
-    // Handle MQTT notifications here
-    std::cout << "Main received MQTT notification for topic: " << topic << ", message: " << message << std::endl;
-}
-
-void mainEventHandler::notifyWebUI(char* topic, char* message) {
+void mainEventHandler::onNotify(char* topic, char* message) {
     // Handle WebUI notifications here
     std::cout << "Main received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
     if (strcmp(topic, "test/topic") == 0) {
@@ -33,12 +26,7 @@ void mainEventHandler::notifyWebUI(char* topic, char* message) {
     }
 }
 
-
-// Create global objects
-SystemManager sys; // Create System object
-BrokerManager broker; // Create BrokerManager object
 mainEventHandler eventHandler; // Create main event handler object
-
 
 void setup(){
   // Start serial communication for debugging
@@ -70,10 +58,10 @@ void setup(){
 
   //register observers
   Serial.println("Registering observers...");
-  client.registerObserver(&webUI);
-  client.registerObserver(&eventHandler);
-  webUI.registerObserver(&eventHandler);
-  webUI.registerObserver(&sys);
+  client.registerObserver(&eventHandler); // main event handler observes MQTT client for incoming messages
+  webUI.registerObserver(&eventHandler); // main event handler observes WebUI for incoming messages
+  webUI.registerObserver(&sys); // System observes WebUI for incoming messages
+  sys.registerObserver(&webUI); // WebUI observes System for updates to display on the UI
   
 
   Serial.println("System Booted");
@@ -95,7 +83,7 @@ void loop() {
 	}
 
   //##### UPDATE WEB AND BROKER #####
-  webUI.updateWeb();
+  webUI.updateWebUI();
   broker.updateBroker();
 
   //##### UART SERIAL INTERFACE #####
