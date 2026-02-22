@@ -5,25 +5,48 @@
 #include <Wire.h>
 #include <algorithm>
 #include <iostream>
+#include <ArduinoJson.h>
 #include <LTC6802.h>
 
 using namespace constants;
 using namespace std;
 
+Sys_Flags SystemManager::sys_flags = { 
+    ENABLE_BMS: 0, 
+    ENABLE_RTC: 0, 
+    ENABLE_SOLAR_FETs: 1, 
+    ENABLE_LOAD_FETs: 1,
+    ENABLE_FAN: 0, 
+    ENABLE_INA226: 0 
+};
+SystemData SystemManager::systemData  = {
+    shuntVoltage: 1.00,
+    shuntCurrent: 2.00,
+    powerUse: 0.00,
+    rtcTime: DateTime(2025, 1, 1, 0, 0, 0), // default time (to be updated when RTC is read)
+    bmsData: {
+        cellVoltages: {1.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        temperatures: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        //stateOfCharge: 100.0,
+        //stateOfHealth: 100.0,
+        //isCharging: false,
+        //isDischarging: false
+    }
+};
+int SystemManager::ina226Status = 0;
+int SystemManager::rtcStatus = 0;
+int SystemManager::bmsStatus = 0;
+
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
 static LTC6802 bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // create battery management system object
 
-// Current state
-float busVoltage = 0;
-float shuntVoltage = 0;
-float current = 0;
-float power = 0;
-float temperature = 0;
-
 float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
 
+
+
 void SystemManager::setupSystem() {
+
     // Initialize I2C
     Wire.begin(); 
 
@@ -37,6 +60,9 @@ void SystemManager::setupSystem() {
     pinMode(SOLAR_FET_PIN, OUTPUT);
     pinMode(LOAD_FET_PIN, OUTPUT);
     pinMode(FAN_PIN, OUTPUT);
+
+    ledcSetup(0, 5000, 8); // Setup PWM for fan control (channel 0, 5 kHz frequency, 8-bit resolution)
+    ledcAttachPin(FAN_PIN, 0); // Attach the fan control pin to the PWM channel
 
     
     // Setup (-1 error, 0 not attempted, 1 success)
@@ -120,44 +146,7 @@ void SystemManager::updateSystem() {
     //performSafetyChecks();
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
-    if(sys_flags.ENABLE_BMS) {
-        if(bmsStatus != 1){
-            Serial.println("Enabling BMS...");
-            bmsStatus = setupBMS();
-        }
-    }
-    else {
-        if(bmsStatus != 0){
-            Serial.println("Disabling BMS...");
-            bmsStatus = 0;
-        }
-    }
-
-    if(sys_flags.ENABLE_RTC) {
-        if(rtcStatus != 1){
-            Serial.println("Enabling RTC...");
-            rtcStatus = setupRTC();
-        }
-    }
-    else {
-        if(rtcStatus != 0){
-            Serial.println("Disabling RTC...");
-            rtcStatus = 0;
-        }
-    }
-
-    if(sys_flags.ENABLE_INA226) {
-        if(ina226Status != 1){
-            Serial.println("Enabling INA226...");
-            ina226Status = setupINA226();
-        }
-    }
-    else {
-        if(ina226Status != 0){
-            Serial.println("Disabling INA226...");
-            ina226Status = 0;
-        }
-    }
+    checkInitWithFlags();
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
@@ -213,55 +202,110 @@ void SystemManager::updateSystem() {
     // send updates to web UI every 5 seconds
     if(webUITimer + 5000 < millis()) {
         webUITimer = millis();
+        Serial.println("Sending updates to Web UI...");
         sendUpdatesToWebUI();
+        Serial.println("Updates sent to Web UI.");
+    }
+}
+
+void SystemManager::checkInitWithFlags()
+{
+    if (sys_flags.ENABLE_BMS)
+    {
+        if (bmsStatus != 1)
+        {
+            Serial.println("Enabling BMS...");
+            bmsStatus = setupBMS();
+        }
+    }
+    else
+    {
+        if (bmsStatus != 0)
+        {
+            Serial.println("Disabling BMS...");
+            bmsStatus = 0;
+        }
+    }
+
+    if (sys_flags.ENABLE_RTC)
+    {
+        if (rtcStatus != 1)
+        {
+            Serial.println("Enabling RTC...");
+            rtcStatus = setupRTC();
+        }
+    }
+    else
+    {
+        if (rtcStatus != 0)
+        {
+            Serial.println("Disabling RTC...");
+            rtcStatus = 0;
+        }
+    }
+
+    if (sys_flags.ENABLE_INA226)
+    {
+        if (ina226Status != 1)
+        {
+            Serial.println("Enabling INA226...");
+            ina226Status = setupINA226();
+        }
+    }
+    else
+    {
+        if (ina226Status != 0)
+        {
+            Serial.println("Disabling INA226...");
+            ina226Status = 0;
+        }
     }
 }
 
 // Gets the voltage, current, and power from the INA226
 void SystemManager::getShuntData(){
     // Read values from INA226 (may require calibration)
-    busVoltage = ina.getBusVoltage_mV();
-    shuntVoltage = ina.getShuntVoltage_mV();
-    current = busVoltage / 3.7;
-    power = current * busVoltage / 1000; // in mW
+    systemData.shuntVoltage = ina.getBusVoltage_mV();
+    systemData.shuntCurrent = ina.getCurrent_mA();
+    systemData.powerUse = systemData.shuntCurrent * systemData.shuntVoltage / 1000; // in mW
 
-    Serial.print("Bus Voltage: ");
-    Serial.print(busVoltage);
+    Serial.print("Shunt Voltage: ");
+    Serial.print(systemData.shuntVoltage);
     Serial.println(" mV");
 
     Serial.print("Shunt Voltage: ");
-    Serial.print(shuntVoltage);
+    Serial.print(systemData.shuntVoltage);
     Serial.println(" mV");
 
     Serial.print("Current: ");
-    Serial.print(current);
+    Serial.print(systemData.shuntCurrent);
     Serial.println(" mA");
 
     Serial.print("Power: ");
-    Serial.print(power);
+    Serial.print(systemData.powerUse);
     Serial.println(" mW");
 }
 
 void SystemManager::getRTCData(){
     // Placeholder for RTC update logic
-    DateTime now = rtc.now(); // Get the current date and time from the RTC
+    systemData.rtcTime = rtc.now(); // Get the current date and time from the RTC
 
-    Serial.print("Date: ");
-    Serial.print(daysOfTheWeek[now.dayOfTheWeek()]); // Print day of the week
-    Serial.print(", ");
-    Serial.print(now.day(), DEC); // Print day
-    Serial.print("/");
-    Serial.print(now.month(), DEC); // Print month
-    Serial.print("/");
-    Serial.print(now.year(), DEC); // Print year
+    // Serial.print("Date: ");
+    // Serial.print(daysOfTheWeek[systemData.rtcTime.dayOfTheWeek()]); // Print day of the week
+    // Serial.print(", ");
+    // Serial.print(systemData.rtcTime.day(), DEC); // Print day
+    // Serial.print("/");
+    // Serial.print(systemData.rtcTime.month(), DEC); // Print month
+    // Serial.print("/");
+    // Serial.print(systemData.rtcTime.year(), DEC); // Print year
 
-    Serial.print(" Time: ");
-    Serial.print(now.hour(), DEC); // Print hour
-    Serial.print(":");
-    Serial.print(now.minute(), DEC); // Print minute
-    Serial.print(":");
-    Serial.print(now.second(), DEC); // Print second
-    Serial.println();
+    // Serial.print(" Time: ");
+    // Serial.print(systemData.rtcTime.hour(), DEC); // Print hour
+    // Serial.print(":");
+    // Serial.print(systemData.rtcTime.minute(), DEC); // Print minute
+    // Serial.print(":");
+    // Serial.print(systemData.rtcTime.second(), DEC); // Print second
+    // Serial.println();
 }
 
 
@@ -292,27 +336,26 @@ int SystemManager::performSafetyChecks(){
 }
 
 void SystemManager::solarFETControl(bool state){
+    if(sys_flags.ENABLE_SOLAR_FETs == 0) state=false; // Turn off if solar FET control is disabled by flags
     digitalWrite(SOLAR_FET_PIN, state ? HIGH : LOW);
 }
 
 void SystemManager::loadFETControl(bool state){
+    if(sys_flags.ENABLE_LOAD_FETs == 0) state=false; // Turn off if load FET control is disabled by flags
     digitalWrite(LOAD_FET_PIN, state ? HIGH : LOW);
 }
 
 void SystemManager::fanControl(bool state){
-    digitalWrite(FAN_PIN, state ? HIGH : LOW);
+    if(sys_flags.ENABLE_FAN == 0) state=false; // Turn off if fan control is disabled by flags
+    ledcWrite(0, state ? (FAN_DUTY_CYCLE * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
 }
 
 void SystemManager::onNotify(char* topic, char* message) {
     // Handle WebUI notifications here
     std::cout << "Sys received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
-    if (strcmp(topic, "test/topic") == 0) {
-        // Example: If the topic is "test/topic", print the message
-        std::cout << "Handling test/topic with message: " << message << std::endl;
-    }
 
     // HANDLE REBOOT REQUEST
-    else if (strcmp(topic, "Restart System") == 0) {
+    if (strcmp(topic, "Restart_System") == 0) {
         std::cout << "Handling System_Reboot with message: " << message << std::endl;
         Serial.println("Rebooting system...");
         ESP.restart(); // Reboot the ESP32
@@ -342,7 +385,12 @@ void SystemManager::onNotify(char* topic, char* message) {
     else if (strcmp(topic, "Enable_BMS") == 0) {
         std::cout << "Handling Enable_BMS with message: " << message << std::endl;
         if (strcmp(message, "1") == 0) sys_flags.ENABLE_BMS = 1;
-        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_BMS = 0;
+        else if (strcmp(message, "0") == 0) {
+            sys_flags.ENABLE_BMS = 0;
+            // Also turn off loads and solar FETs if BMS is disabled for safety
+            //solarFETControl(false);
+            //loadFETControl(false);
+        }
     }
 
     else if (strcmp(topic, "Enable_RTC") == 0) {
@@ -354,19 +402,31 @@ void SystemManager::onNotify(char* topic, char* message) {
     else if (strcmp(topic, "Enable_Solar_FETs") == 0) {
         std::cout << "Handling Enable_Solar_FETs with message: " << message << std::endl;
         if (strcmp(message, "1") == 0) sys_flags.ENABLE_SOLAR_FETs = 1;
-        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_SOLAR_FETs = 0;
+        else if (strcmp(message, "0") == 0) {
+            sys_flags.ENABLE_SOLAR_FETs = 0;
+            // Also turn off solar FETs if control is disabled for safety
+            solarFETControl(false);
+        }
     }
 
     else if (strcmp(topic, "Enable_Load_FETs") == 0) {
         std::cout << "Handling Enable_Load_FETs with message: " << message << std::endl;
         if (strcmp(message, "1") == 0) sys_flags.ENABLE_LOAD_FETs = 1;
-        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_LOAD_FETs = 0;
+        else if (strcmp(message, "0") == 0) {
+            sys_flags.ENABLE_LOAD_FETs = 0;
+            // Also turn off load FETs if control is disabled for safety
+            loadFETControl(false);
+        }
     }
 
     else if (strcmp(topic, "Enable_Fan") == 0) {
         std::cout << "Handling Enable_Fan with message: " << message << std::endl;
         if (strcmp(message, "1") == 0) sys_flags.ENABLE_FAN = 1;
-        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_FAN = 0;
+        else if (strcmp(message, "0") == 0) {
+            sys_flags.ENABLE_FAN = 0;
+            // Also turn off fan if control is disabled for safety
+            fanControl(false);
+        }
     }
 
     else if (strcmp(topic, "Enable_INA226") == 0) {
@@ -377,16 +437,46 @@ void SystemManager::onNotify(char* topic, char* message) {
 }
 
 void SystemManager::sendUpdatesToWebUI(){
-    // serialize system flags into a json and send to web UI
-    std::string msgStr = "{";
-    msgStr += "\"ENABLE_BMS\":" + std::to_string(sys_flags.ENABLE_BMS) + ",";
-    msgStr += "\"ENABLE_RTC\":" + std::to_string(sys_flags.ENABLE_RTC) + ",";
-    msgStr += "\"ENABLE_SOLAR_FETs\":" + std::to_string(sys_flags.ENABLE_SOLAR_FETs) + ",";
-    msgStr += "\"ENABLE_LOAD_FETs\":" + std::to_string(sys_flags.ENABLE_LOAD_FETs) + ",";
-    msgStr += "\"ENABLE_FAN\":" + std::to_string(sys_flags.ENABLE_FAN) + ",";
-    msgStr += "\"ENABLE_INA226\":" + std::to_string(sys_flags.ENABLE_INA226);
-    msgStr += "}";
-    notifyObservers("system_update/flags", (char*)msgStr.c_str());
+    // Build JSON for flags using ArduinoJson
+    JsonDocument flagsDoc;
+    flagsDoc["Enable_BMS"] = (int)sys_flags.ENABLE_BMS;
+    flagsDoc["Enable_RTC"] = (int)sys_flags.ENABLE_RTC;
+    flagsDoc["Enable_Solar_FETs"] = (int)sys_flags.ENABLE_SOLAR_FETs;
+    flagsDoc["Enable_Load_FETs"] = (int)sys_flags.ENABLE_LOAD_FETs;
+    flagsDoc["Enable_Fan"] = (int)sys_flags.ENABLE_FAN;
+    flagsDoc["Enable_INA226"] = (int)sys_flags.ENABLE_INA226;
+    std::string flagsOut;
+    serializeJson(flagsDoc, flagsOut);
+    notifyObservers((char*)"system_update/flags", (char*)flagsOut.c_str());
+
+    // Build JSON for data using ArduinoJson
+    JsonDocument dataDoc;
+    dataDoc["Toggle_Solar_FETs"] = digitalRead(SOLAR_FET_PIN);
+    dataDoc["Toggle_Load_FETs"] = digitalRead(LOAD_FET_PIN);
+
+    auto fanStatus = []() -> int {
+        int pwmValue = ledcRead(0); // Read the current PWM value for the fan on channel 0
+        if (pwmValue > FAN_DUTY_CYCLE * 255 * 0.5) return 1; // Fan is on
+        else return 0; // Fan is off
+    };
+    dataDoc["Toggle_Fan"] = fanStatus();
+
+    dataDoc["Shunt_Voltage"] = systemData.shuntVoltage;
+    dataDoc["Shunt_Current"] = systemData.shuntCurrent;
+    dataDoc["Power"] = systemData.powerUse;
+    dataDoc["RTC_Time"] = systemData.rtcTime.timestamp();
+
+    // BMS cell voltages
+    JsonArray cells = dataDoc["BMS_Cell_Voltages"].to<JsonArray>();
+    for (int i = 0; i < 6; ++i) cells.add(systemData.bmsData.cellVoltages[i]);
+
+    // BMS temperatures
+    JsonArray temps = dataDoc["BMS_Temperatures"].to<JsonArray>();
+    for (int i = 0; i < 6; ++i) temps.add(systemData.bmsData.temperatures[i]);
+
+    std::string dataOut;
+    serializeJson(dataDoc, dataOut);
+    notifyObservers((char*)"system_update/data", (char*)dataOut.c_str());
 }
 
 // System Subject implementation

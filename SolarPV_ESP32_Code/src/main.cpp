@@ -15,10 +15,10 @@ void mainEventHandler::onNotify(char* topic, char* message) {
         // Example: If the topic is "test/topic", print the message
         std::cout << "Handling test/topic with message: " << message << std::endl;
     }
-    if (strcmp(topic, "start_client") == 0) {
+    if (strcmp(topic, "Start_Client") == 0) {
         // Example: If the topic is "start_client", perform some action
-        std::cout << "Handling start_client with message: " << message << std::endl;
-        if (strcmp(message, "true") == 0) {
+        std::cout << "Handling Start_Client with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) {
             // Start the MQTT client or perform some related action
             std::cout << "Starting MQTT client..." << std::endl;
             client.setupClient();

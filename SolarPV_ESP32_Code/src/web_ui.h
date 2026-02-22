@@ -57,7 +57,14 @@ private:
     //UI handles
     uint16_t wifi_ssid_text, wifi_pass_text;
     uint16_t main_button;
-    uint16_t mainSwitcher, test_message_text, mainTime;
+    //control switches
+    uint16_t toggle_solar_switcher, toggle_load_switcher, toggle_fan_switcher;
+    //system flag switches
+    uint16_t enable_bms_switcher, enable_rtc_switcher, enable_ina226_switcher, enable_solar_switcher, enable_load_switcher, enable_fan_switcher;
+    //values
+    uint16_t rtc_time_label, shunt_voltage_label, current_label;
+    //other
+    uint16_t test_message_text, mainTime;
 
     // prototypes
     void generalCallback(Control *sender, int type);

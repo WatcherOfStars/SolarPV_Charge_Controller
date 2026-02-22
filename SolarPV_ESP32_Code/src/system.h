@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <observer.h>
+#include <RTClib.h>
 
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
@@ -65,6 +66,7 @@ struct SystemData {
     float shuntVoltage; // Shunt voltage in mV
     float shuntCurrent; // Current in A
     float powerUse; // Power in mW
+    DateTime rtcTime; // current time from RTC
     BMSData bmsData; // Battery management system data
 };
 
@@ -73,29 +75,27 @@ class SystemManager : public observer, public subject {
 private:
     std::vector<observer*> observers; //list of observers
     // Set sys_flags
-    Sys_Flags sys_flags = { 
-        ENABLE_BMS: 1, 
-        ENABLE_RTC: 0, 
-        ENABLE_SOLAR_FETs: 1, 
-        ENABLE_LOAD_FETs: 1,
-        ENABLE_FAN: 0, 
-        ENABLE_INA226: 0 };
+    static Sys_Flags sys_flags; // system flags to control which components are active
 
+    static SystemData systemData; // struct to hold system data for easy access and updates
+    
     int setupBMS(); //to be called to setup BMS
     void updateBMS(); //to be called to update BMS
     int setupRTC(); //to be called to setup RTC
     int setupINA226(); //to be called to setup INA226
 
     // status
-    int ina226Status = 0; // status of INA226 setup (0 = not attempted, -1 = failed, 1 = successful)
-    int rtcStatus = 0; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
-    int bmsStatus = 0; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
+    static int ina226Status; // status of INA226 setup (0 = not attempted, -1 = failed, 1 = successful)
+    static int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
+    static int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
 
     
 
 public:
     void setupSystem(); //to be called in setup
-    void updateSystem(); //to be called in loop
+    void updateSystem(); // to be called in loop
+
+    void checkInitWithFlags();
 
     void sendUpdatesToWebUI(); //to be called to send updates to the web UI
 
