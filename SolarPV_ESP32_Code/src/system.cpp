@@ -13,11 +13,11 @@ using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
     ENABLE_BMS: 0, 
-    ENABLE_RTC: 0, 
+    ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
     ENABLE_FAN: 0, 
-    ENABLE_INA226: 0 
+    ENABLE_INA226: 1 
 };
 SystemData SystemManager::systemData  = {
     shuntVoltage: 1.00,
@@ -265,7 +265,7 @@ void SystemManager::checkInitWithFlags()
 // Gets the voltage, current, and power from the INA226
 void SystemManager::getShuntData(){
     // Read values from INA226 (may require calibration)
-    systemData.shuntVoltage = ina.getBusVoltage_mV();
+    systemData.shuntVoltage = ina.getShuntVoltage_mV();
     systemData.shuntCurrent = ina.getCurrent_mA();
     systemData.powerUse = systemData.shuntCurrent * systemData.shuntVoltage / 1000; // in mW
 

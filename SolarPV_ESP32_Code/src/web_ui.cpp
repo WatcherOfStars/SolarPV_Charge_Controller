@@ -25,7 +25,6 @@ void WebUI::setupWebConn(){
 
 
 void WebUI::updateWebUI(){
-	
 
 }
 

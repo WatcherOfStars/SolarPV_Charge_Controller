@@ -18,8 +18,8 @@ namespace constants {
     inline constexpr float MIN_CELL_TEMPERATURE = -20.0; // minimum safe temperature for a cell in degrees Celsius
     inline constexpr float MAX_PACK_VOLTAGE = NUM_CELLS * MAX_CELL_VOLTAGE; // maximum voltage for the entire battery pack
     inline constexpr float MIN_PACK_VOLTAGE = NUM_CELLS * MIN_CELL_VOLTAGE; // minimum voltage for the entire battery pack
-    inline constexpr float SHUNT_RESISTANCE = 0.002745; // shunt resistance in ohms for current measurement  
-    inline constexpr float MAX_CURRENT = 60.0; // maximum current in amps for the system
+    inline constexpr float SHUNT_RESISTANCE = 0.00075; // shunt resistance in ohms for current measurement  
+    inline constexpr float MAX_CURRENT = 20.0; // maximum current in amps for the system
     inline constexpr float FAN_ON_TEMPERATURE = 40.0; // temperature in degrees Celsius to turn the cooling fan on
     inline constexpr float FAN_OFF_TEMPERATURE = 35.0; // temperature in degrees Celsius to turn the cooling fan off
     inline constexpr float LOW_BATTERY_THRESHOLD = 20.0; // state of charge percentage to consider the battery low
