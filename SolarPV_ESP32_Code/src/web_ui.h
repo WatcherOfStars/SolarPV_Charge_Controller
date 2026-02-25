@@ -16,21 +16,6 @@ namespace constants {
     inline constexpr int FORCE_USE_HOTSPOT = 0;
 }
 
-// //observer and subject class prototypes
-// class webuiClientObserver{ //todo: do we need aliases for topic and message types?
-// public:
-//     virtual void notifyWebUI(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
-//     virtual ~webuiClientObserver() = default; //destructor
-// };
-
-// class webuiClientSubject{
-// public:
-//     virtual void registerObserver(webuiClientObserver* obs) = 0;
-//     virtual void removeObserver(webuiClientObserver* obs) = 0;
-//     virtual void notifyObservers(char* topic, char* message) = 0;
-//     virtual ~webuiClientSubject() = default; //destructor
-// };
-
 
 //class prototype
 class WebUI : public subject, public observer {
@@ -62,7 +47,9 @@ private:
     //system flag switches
     uint16_t enable_bms_switcher, enable_rtc_switcher, enable_ina226_switcher, enable_solar_switcher, enable_load_switcher, enable_fan_switcher;
     //values
-    uint16_t rtc_time_label, shunt_voltage_label, current_label;
+    uint16_t rtc_time_label, shunt_voltage_label, current_label, cell_voltages_label, cell_temperatures_label;
+    //status labels
+    uint16_t ina226_status_label, rtc_status_label, bms_status_label;
     //other
     uint16_t test_message_text, mainTime;
 

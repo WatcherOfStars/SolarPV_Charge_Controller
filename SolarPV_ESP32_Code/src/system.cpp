@@ -12,7 +12,7 @@ using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 0, 
+    ENABLE_BMS: 1, 
     ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
@@ -25,8 +25,8 @@ SystemData SystemManager::systemData  = {
     powerUse: 0.00,
     rtcTime: DateTime(2025, 1, 1, 0, 0, 0), // default time (to be updated when RTC is read)
     bmsData: {
-        cellVoltages: {1.00, 0.00, 0.00, 0.00, 0.00, 0.00},
-        temperatures: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        cellVoltages: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        cellTemperatures: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
         //stateOfCharge: 100.0,
         //stateOfHealth: 100.0,
         //isCharging: false,
@@ -467,12 +467,17 @@ void SystemManager::sendUpdatesToWebUI(){
     dataDoc["RTC_Time"] = systemData.rtcTime.timestamp();
 
     // BMS cell voltages
-    JsonArray cells = dataDoc["BMS_Cell_Voltages"].to<JsonArray>();
+    JsonArray cells = dataDoc["Cell_Voltages"].to<JsonArray>();
     for (int i = 0; i < 6; ++i) cells.add(systemData.bmsData.cellVoltages[i]);
 
     // BMS temperatures
-    JsonArray temps = dataDoc["BMS_Temperatures"].to<JsonArray>();
-    for (int i = 0; i < 6; ++i) temps.add(systemData.bmsData.temperatures[i]);
+    JsonArray temps = dataDoc["Cell_Temperatures"].to<JsonArray>();
+    for (int i = 0; i < 6; ++i) temps.add(systemData.bmsData.cellTemperatures[i]);
+
+    // Stautus of components
+    dataDoc["INA226_Status"] = ina226Status;
+    dataDoc["RTC_Status"] = rtcStatus;
+    dataDoc["BMS_Status"] = bmsStatus;
 
     std::string dataOut;
     serializeJson(dataDoc, dataOut);
@@ -488,8 +493,8 @@ void SystemManager::removeObserver(observer* obs) {
 	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
 void SystemManager::notifyObservers(char* topic, char* message) {
-	std::cout << "Notifying System Observers for topic: " << topic << std::endl;
-	std::cout << "Message: " << message << std::endl;
+	// std::cout << "Notifying System Observers for topic: " << topic << std::endl;
+	// std::cout << "Message: " << message << std::endl;
 	for (auto& obs : observers) {
 		obs->onNotify(topic, message);
 	}

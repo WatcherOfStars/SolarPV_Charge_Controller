@@ -94,6 +94,13 @@ void WebUI::setupWebUI(){
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, maintab, my_generalCallback);
 	shunt_voltage_label = ESPUI.addControl(Label, "Shunt_Voltage", "", Wetasphalt, maintab, my_generalCallback);
 	current_label = ESPUI.addControl(Label, "Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
+	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, maintab, my_generalCallback);
+	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, maintab, my_generalCallback);
+
+	ESPUI.addControl(Separator, "Component Status", "", None, maintab);
+	ina226_status_label = ESPUI.addControl(Label, "INA226_Status", "", Wetasphalt, maintab, my_generalCallback);
+	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, maintab, my_generalCallback);
+	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, maintab, my_generalCallback);
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
 	// mainSlider = ESPUI.addControl(Slider, "Slider", "200", Wetasphalt, maintab, generalCallback);
@@ -288,10 +295,10 @@ void WebUI::updateObserversCallback(Control *sender, int type) {
 // WebUI Observer implementation
 void WebUI::onNotify(char* topic, char* message) {
 	//This function is called when an MQTT message is received.
-	Serial.print("WebUI received notification on topic: ");
-	Serial.print(topic);
-	Serial.print(" with message: ");
-	Serial.println(message);
+	// Serial.print("WebUI received notification on topic: ");
+	// Serial.print(topic);
+	// Serial.print(" with message: ");
+	// Serial.println(message);
 
 	//Handle toggle value updates
 	if (strcmp(topic, "system_update/data") == 0) {
@@ -314,6 +321,11 @@ void WebUI::onNotify(char* topic, char* message) {
 		ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
 		ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
 		ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
+		ESPUI.updateLabel(cell_voltages_label, doc["Cell_Voltages"]);
+		ESPUI.updateLabel(cell_temperatures_label, doc["Cell_Temperatures"]);
+		ESPUI.updateLabel(ina226_status_label, doc["INA226_Status"]);
+		ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
+		ESPUI.updateLabel(bms_status_label, doc["BMS_Status"]);
 	}
 
 	//Handle system flag updates
@@ -348,8 +360,8 @@ void WebUI::removeObserver(observer* obs) {
 	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
 void WebUI::notifyObservers(char* topic, char* message) {
-	std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
-	std::cout << "Message: " << message << std::endl;
+	// std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
+	// std::cout << "Message: " << message << std::endl;
 	for (auto& obs : observers) {
 		obs->onNotify(topic, message);
 	}
