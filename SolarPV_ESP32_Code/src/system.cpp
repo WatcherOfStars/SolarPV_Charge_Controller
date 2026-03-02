@@ -12,7 +12,7 @@ using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 1, 
+    ENABLE_BMS: 0, 
     ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,

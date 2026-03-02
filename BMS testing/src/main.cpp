@@ -15,18 +15,50 @@
 // static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
 
 // Define registers as bitsets for SPI communication
-std::bitset<2> cmnd; //command register
-std::bitset<7> tmp; //temperature register
-std::bitset<20> cvr; //raw cell voltages register
-std::bitset<8> cfr; //config read register
-std::bitset<8> writecfr; //config write register
-std::bitset<13> cv; //calculated cell voltage register
+// std::array<uint8_t, 2> cmnd; //command register
+// std::array<uint8_t, 7> tmp; //temperature register
+// std::array<uint8_t, 20> cvr; //raw cell voltages register
+// std::array<uint8_t, 8> cfr; //config read register
+// std::array<uint8_t, 8> writecfr; //config write register
+// std::array<uint8_t, 13> cv; //calculated cell voltage register
+byte cmnd[2]; // command register
+byte tmp[7]; // temperature register
+byte cvr[20]; // raw cell voltages register
+byte cfr[8]; // config read register
+byte writecfr[8]; // config write register
+byte cv[13]; // calculated cell voltage register
 
 float t1 = 0;
 bool write_config = true;
 
 static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3);
 
+void writeConfig();
+
+void writeConfig() {
+  digitalWrite(CS, LOW);
+  SPI.beginTransaction(spiSettings);
+  //SPI.transfer(0x80); // Write Config Command (address 0x80)
+  SPI.transfer(0x01); // PEC
+  writecfr[0]=0;
+  writecfr[1]=1;
+  writecfr[2]=97;
+  byte dcc = 0; //discharge cell bitmask
+  byte mci = 0; //mask cell interrupts bitmask
+  byte vuv = 125; //undervoltage threshold
+  byte vov = 167; //overvoltage threshold
+  writecfr[3]=(dcc&255);
+  writecfr[4]=((dcc>>8)|(mci<<4&240));
+  writecfr[5]=(mci>>4);
+  writecfr[6]=vuv;
+  writecfr[7]=vov;
+  for (int i = 0; i < 8; i++)
+  {
+    SPI.transfer(writecfr[i]);
+  }
+  SPI.endTransaction();
+  digitalWrite(CS, HIGH);
+}
 
 void setup() {
   //start SPI
@@ -102,31 +134,47 @@ void printCellVoltages(){
   Serial.println(cellvolts[11] * 1.5 / 1000);
 }
 
-
-void writeConfig() {
-  digitalWrite(CS, LOW);
+void measure(const byte cmd); // call before reading values to start conversion
+void measure(const byte cmd)
+{
   SPI.beginTransaction(spiSettings);
-  //SPI.transfer(0x80); // Write Config Command (address 0x80)
-  SPI.transfer(0x01); // PEC
-  writecfr[0]=0;
-  writecfr[1]=1;
-  writecfr[2]=97;
-  byte dcc = 0; //discharge cell bitmask
-  byte mci = 0; //mask cell interrupts bitmask
-  byte vuv = 125; //undervoltage threshold
-  byte vov = 167; //overvoltage threshold
-  writecfr[3]=(dcc&255);
-  writecfr[4]=((dcc>>8)|(mci<<4&240));
-  writecfr[5]=(mci>>4);
-  writecfr[6]=vuv;
-  writecfr[7]=vov;
-  for (int i = 0; i < 8; i++)
-  {
-    SPI.transfer(writecfr[i]);
-  }
-  SPI.endTransaction();
+  digitalWrite(CS, LOW);
+
+  SPI.transfer(cmd);
+
   digitalWrite(CS, HIGH);
+  SPI.endTransaction();
+  sleep(0.0022); //delay to ensure measurement is complete before reading
 }
+
+void readValues(const byte cmd, const byte numOfRegisters, byte *const arr); // call after measure to read values from specified registers
+void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
+{
+  do
+  {
+    SPI.beginTransaction(spiSettings);
+    digitalWrite(CS, LOW);
+
+    SPI.transfer(cmd); // Send the command to read the specified registers
+    Serial.print("Reading command: 0x");
+    Serial.println(cmd, HEX);
+
+    for (int i = 0; i < numOfRegisters; ++i) // Read the specified number of registers into the provided array
+    {
+      arr[i] = SPI.transfer(0x00); // should this be 0x00 instead of cmd?
+      Serial.print("  Register ");      Serial.print(i);
+      Serial.print(": 0x");      Serial.print(arr[i], HEX);
+    }
+    (void)SPI.transfer(cmd); // Read and intentionally discard PEC byte
+    Serial.println("  (PEC byte discarded)");
+
+    digitalWrite(CS, HIGH);
+    SPI.endTransaction();
+  }
+  while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
+  sleep(0.0022);
+}
+
 
 void loop() {
   Serial.println("Starting Main Loop...");
@@ -165,16 +213,19 @@ void loop() {
     Serial.print(cmnd[i]);
   }
   Serial.println();
+
   Serial.print("Config Register: ");
   for (int i=0; i<=7; i++){
     Serial.print(cfr[i]);
   }
   Serial.println();
+
   Serial.print("Temperature Register: ");
-  for (int i=0; i<=7; i++){
+  for (int i=0; i<=6; i++){
     Serial.print(tmp[i]);
   }
   Serial.println();
+
   Serial.print("Cell Voltages Register: ");
   for (int i=0; i<=19; i++){
     Serial.print(cvr[i]);
@@ -182,37 +233,51 @@ void loop() {
   Serial.println();
   Serial.println("-----");
 
-  //read spi registers
+  // //read spi registers
+  // Serial.println("Reading SPI Registers...");
+  // SPI.beginTransaction(spiSettings);
+  // digitalWrite(CS, LOW); //pull CS low to start communication
+  // sleep(0.0022); //delay to ensure SPI is ready
+  // Serial.println("Temp convertion...");
+  // SPI.transfer(0x30); //temperature conversion
+  // sleep(0.0022);
+  // Serial.println("Reading temperature...");
+  // tmp = SPI.transfer(0x08); //read temperature
+  // sleep(0.002);
+  // Serial.println("Voltage conversion...");
+  // SPI.transfer(0x10); //voltage conversion
+  // sleep(0.0022);
+  // Serial.println("Reading cell voltages...");
+  // cvr = SPI.transfer(0x04); //read cell voltages
+  // sleep(0.0022);
+  // Serial.println("Reading config register...");
+  // cfr = SPI.transfer(0x02); //read config register
+  // sleep(0.002);
+  // digitalWrite(CS, HIGH); //pull CS high to end communication
+  // SPI.endTransaction();
+
   Serial.println("Reading SPI Registers...");
-  SPI.beginTransaction(spiSettings);
-  sleep(0.0022); //delay to ensure SPI is ready
-  Serial.println("Temp convertion...");
-  SPI.transfer(0x30); //temperature conversion
-  sleep(0.0022);
+  Serial.println("Temp conversion...");
+  measure(0x30); //temperature conversion
   Serial.println("Reading temperature...");
-  tmp = SPI.transfer(0x08); //read temperature
-  sleep(0.002);
+  readValues(0x08, 8, tmp); //read temperature
   Serial.println("Voltage conversion...");
-  SPI.transfer(0x10); //voltage conversion
-  sleep(0.0022);
+  measure(0x10); //voltage conversion
   Serial.println("Reading cell voltages...");
-  cvr = SPI.transfer(0x04); //read cell voltages
-  sleep(0.0022);
+  readValues(0x04, 20, cvr); //read cell voltages
   Serial.println("Reading config register...");
-  cfr = SPI.transfer(0x02); //read config register
-  sleep(0.002);
-  digitalWrite(CS, HIGH); //pull CS high to end communication
-  SPI.endTransaction();
+  readValues(0x02, 8, cfr); //read config register
 
   //print results
   Serial.print("Cell Voltages: ");
-  for (int i=0; i<=19; i++){
-    Serial.print(cvr[i]);
-    printCellVoltages();
-  }
+  printCellVoltages();
+  // for (int i=0; i<=19; i++){
+  //   Serial.print(cvr[i]);
+    
+  // }
   Serial.println();
   Serial.print("Temperature: ");
-  for (int i=0; i<=7; i++){
+  for (int i=0; i<=6; i++){
     Serial.print(tmp[i]);
   }
   Serial.println();
@@ -223,7 +288,7 @@ void loop() {
   Serial.println();
   Serial.println("-----");
 
-  delay(1000); //wait 1 second before next loop
+  delay(5000); //wait 5 seconds before next loop
 
 }
 
