@@ -11,8 +11,35 @@
 #define CS 5
 #define BMS_ADDRESS 0x80
 
+// Config register bitmasks and bit positions
+static const byte CFG0_WDT_BIT    = 7;    /**< Configuration register 0 watchdog timer bit. */
+static const byte CFG0_GPIO2_BIT  = 6;    /**< Configuration register 0 GPIO2 bit. */
+static const byte CFG0_GPIO1_BIT  = 5;    /**< Configuration register 0 GPIO1 bit. */
+static const byte CFG0_LVLPL_BIT  = 4;    /**< Configuration register 0 level polling mode bit. */
+static const byte CFG0_CELL10_BIT = 3;    /**< Configuration register 0 10-cell mode bit. */
+static const byte CFG0_WDT_MSK    = 0x80; /**< Configuration register 0 watchdog timer bitmask. */
+static const byte CFG0_GPIO2_MSK  = 0x40; /**< Configuration register 0 GPIO2 bitmask. */
+static const byte CFG0_GPIO1_MSK  = 0x20; /**< Configuration register 0 GPIO1 bitmask. */
+static const byte CFG0_LVLPL_MSK  = 0x10; /**< Configuration register 0 level polling bitmask. */
+static const byte CFG0_CELL10_MSK = 0x08; /**< Configuration register 0 10-cell mode bitmask. */
+static const byte CFG0_CDC_MSK    = 0x07; /**< Configuration register 0 comparator duty cycle bitmask. */
+static const byte CFG1_DCC_MSK    = 0xff; /**< Configuration register 1 discharge cell bitmask. */
+static const byte CFG2_DCC_MSK    = 0x0f; /**< Configuration register 2 discharge cell bitmask. */
+static const byte CFG2_MCI_MSK    = 0xf0; /**< Configuration register 2 mask cell interrupts bitmask. */
+static const byte CFG3_MCI_MSK    = 0xff; /**< Configuration register 3 mask cell interrupts bitmask. */
+static const byte CFG0_WDT_INVMSK    = 0x7f; /**< Configuration register 0 watchdog timer inverse bitmask. */
+static const byte CFG0_GPIO2_INVMSK  = 0xbf; /**< Configuration register 0 GPIO2 inverse bitmask. */
+static const byte CFG0_GPIO1_INVMSK  = 0xdf; /**< Configuration register 0 GPIO1 inverse bitmask. */
+static const byte CFG0_LVLPL_INVMSK  = 0xef; /**< Configuration register 0 level polling mode inverse bitmask. */
+static const byte CFG0_CELL10_INVMSK = 0xf7; /**< Configuration register 0 10-cell mode inverse bitmask. */
+static const byte CFG0_CDC_INVMSK    = 0xf8; /**< Configuration register 0 comparator duty cycle inverse bitmask. */
+static const byte CFG1_DCC_INVMSK    = 0x00; /**< Configuration register 1 discharge cell inverse bitmask. */
+static const byte CFG2_DCC_INVMSK    = 0xf0; /**< Configuration register 2 discharge cell inverse bitmask. */
+static const byte CFG2_MCI_INVMSK    = 0x0f; /**< Configuration register 2 mask cell interrupts inverse bitmask. */
+static const byte CFG3_MCI_INVMSK    = 0x00; /**< Configuration register 3 mask cell interrupts inverse bitmask. */
+
 // Instantiate LTC6802 object
-// static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
+//static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
 
 // Define registers as bitsets for SPI communication
 // std::array<uint8_t, 2> cmnd; //command register
@@ -25,8 +52,14 @@ byte cmnd[2]; // command register
 byte tmp[7]; // temperature register
 byte cvr[20]; // raw cell voltages register
 byte cfr[8]; // config read register
-byte writecfr[8]; // config write register
+byte writecfr[6]; // config write register
 byte cv[13]; // calculated cell voltage register
+
+byte dcc = 0; // discharge cell tribble
+byte mci = 0; // mask cell interrupts
+byte vuv = 125; // undervoltage config flag
+byte vov = 167; // overvoltage config flag
+
 
 float t1 = 0;
 bool write_config = true;
@@ -36,28 +69,28 @@ static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3)
 void writeConfig();
 
 void writeConfig() {
-  digitalWrite(CS, LOW);
+  // Writes config registers per guidelines in datasheet page 27
+  
+  // Set configuration register values
+  writecfr[0]=1;
+	writecfr[1]=97;
+	writecfr[2]=(dcc&255);
+	writecfr[3]=((dcc>>8)|(mci<<4&240));
+	writecfr[4]=(mci>>4);
+	writecfr[5]=vuv;
+	writecfr[6]=vov;
+
+  digitalWrite(CS, LOW); //pull CS low to start communication
   SPI.beginTransaction(spiSettings);
-  //SPI.transfer(0x80); // Write Config Command (address 0x80)
-  SPI.transfer(0x01); // PEC
-  writecfr[0]=0;
-  writecfr[1]=1;
-  writecfr[2]=97;
-  byte dcc = 0; //discharge cell bitmask
-  byte mci = 0; //mask cell interrupts bitmask
-  byte vuv = 125; //undervoltage threshold
-  byte vov = 167; //overvoltage threshold
-  writecfr[3]=(dcc&255);
-  writecfr[4]=((dcc>>8)|(mci<<4&240));
-  writecfr[5]=(mci>>4);
-  writecfr[6]=vuv;
-  writecfr[7]=vov;
-  for (int i = 0; i < 8; i++)
+  SPI.transfer(0x01); //send WRCFG byte
+
+  for (int i = 0; i < 6; i++) //6 config registers
   {
-    SPI.transfer(writecfr[i]);
+    SPI.transfer(writecfr[i]); //send config register bytes
   }
+
   SPI.endTransaction();
-  digitalWrite(CS, HIGH);
+  digitalWrite(CS, HIGH); //pull CS high to end communication
 }
 
 void setup() {
@@ -73,9 +106,6 @@ void setup() {
   cvr[0]=0;
   cfr[0]=0;
   cfr[1]=2;
-  writecfr[0]=0;
-  writecfr[1]=1;
-  writecfr[2]=97;
   cmnd[0] = 0;
 
   writeConfig();

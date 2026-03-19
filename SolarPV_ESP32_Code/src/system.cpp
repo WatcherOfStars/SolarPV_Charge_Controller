@@ -127,6 +127,10 @@ int SystemManager::setupINA226() {
 
 // sets up the battery management system
 int SystemManager::setupBMS(){
+    if (!sys_flags.ENABLE_BMS) {
+        return 0; // BMS setup not attempted
+    }
+
     //bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // Initialize the BMS object with the I2C address and Wire instance
     LTC6802::initSPI(BMS_MOSI_PIN, BMS_MISO_PIN, BMS_CLK_PIN); // Initialize the SPI bus for the BMS
     bms.cfgRead();         // Read configuration from chip
