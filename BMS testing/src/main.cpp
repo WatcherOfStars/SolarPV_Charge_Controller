@@ -56,7 +56,6 @@ byte vov = 167; // overvoltage config flag
 
 
 float t1 = 0;
-bool write_config = true;
 
 static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3);
 
@@ -206,25 +205,25 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
 
 void loop() {
   Serial.println("Starting Main Loop...");
-  digitalWrite(CS, LOW); //pull CS low to start communication
+  //digitalWrite(CS, LOW); //pull CS low to start communication
 
   //reset arrays
-  Serial.println("Resetting Arrays...");
-  cvr[1]=0x04;
-  tmp[1]=0x08;
-  for (int i=2; i<=19; i++){
-    cvr[i]=0;
-  }
+  // Serial.println("Resetting Arrays...");
+  // cvr[1]=0x04;
+  // tmp[1]=0x08;
+  // for (int i=2; i<=19; i++){
+  //   cvr[i]=0;
+  // }
 
   //conversion commands
-  Serial.println("Creating Conversion Commands...");
-  cmnd[1]=0x30;
-  cfr[1]=0x02;
+  // Serial.println("Creating Conversion Commands...");
+  // cmnd[1]=0x30;
+  // cfr[1]=0x02;
 
 
-  for (int i=2; i<=7; i++){
-    cfr[i]=0;
-  }
+  // for (int i=2; i<=7; i++){
+  //   cfr[i]=0;
+  // }
 
   //write config register every 10 seconds TODO add contidion for pull up or down
   // if(millis() - t1 >= 10000){
@@ -237,31 +236,31 @@ void loop() {
   Serial.println("Wrote CFR");
 
   //print current registers
-  Serial.println("-----");
-  Serial.print("Command Register: ");
-  for (int i=0; i<=1; i++){
-    Serial.print(cmnd[i]);
-  }
-  Serial.println();
+  // Serial.println("-----");
+  // Serial.print("Command Register: ");
+  // for (int i=0; i<=1; i++){
+  //   Serial.print(cmnd[i]);
+  // }
+  // Serial.println();
 
-  Serial.print("Config Register: ");
-  for (int i=0; i<=7; i++){
-    Serial.print(cfr[i]);
-  }
-  Serial.println();
+  // Serial.print("Config Register: ");
+  // for (int i=0; i<=7; i++){
+  //   Serial.print(cfr[i]);
+  // }
+  // Serial.println();
 
-  Serial.print("Temperature Register: ");
-  for (int i=0; i<=6; i++){
-    Serial.print(tmp[i]);
-  }
-  Serial.println();
+  // Serial.print("Temperature Register: ");
+  // for (int i=0; i<=6; i++){
+  //   Serial.print(tmp[i]);
+  // }
+  // Serial.println();
 
-  Serial.print("Cell Voltages Register: ");
-  for (int i=0; i<=19; i++){
-    Serial.print(cvr[i]);
-  }
-  Serial.println();
-  Serial.println("-----");
+  // Serial.print("Cell Voltages Register: ");
+  // for (int i=0; i<=19; i++){
+  //   Serial.print(cvr[i]);
+  // }
+  // Serial.println();
+  // Serial.println("-----");
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading
@@ -269,8 +268,8 @@ void loop() {
   readValues(0x04, 20, cvr); //read cell voltages
 
   //temperature conversion and reading
-  measure(0x30); //start temperature conversion (all temps)
-  readValues(0x08, 7, tmp); //read temperatures
+  // measure(0x30); //start temperature conversion (all temps)
+  // readValues(0x08, 7, tmp); //read temperatures
 
   //config register reading
   readValues(0x02, 8, cfr); //read config registers
@@ -295,11 +294,11 @@ void loop() {
   //   Serial.print(cvr[i]);
     
   // }
-  Serial.println();
-  Serial.print("Temperature: ");
-  for (int i=0; i<=6; i++){
-    Serial.print(tmp[i]);
-  }
+  // Serial.println();
+  // Serial.print("Temperature: ");
+  // for (int i=0; i<=6; i++){
+  //   Serial.print(tmp[i]);
+  // }
   Serial.println();
   Serial.print("Config Register: ");
   for (int i=0; i<=7; i++){
