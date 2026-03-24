@@ -41,13 +41,7 @@ static const byte CFG3_MCI_INVMSK    = 0x00; /**< Configuration register 3 mask 
 // Instantiate LTC6802 object
 //static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
 
-// Define registers as bitsets for SPI communication
-// std::array<uint8_t, 2> cmnd; //command register
-// std::array<uint8_t, 7> tmp; //temperature register
-// std::array<uint8_t, 20> cvr; //raw cell voltages register
-// std::array<uint8_t, 8> cfr; //config read register
-// std::array<uint8_t, 8> writecfr; //config write register
-// std::array<uint8_t, 13> cv; //calculated cell voltage register
+// Define registers for SPI communication
 byte cmnd[2]; // command register
 byte tmp[7]; // temperature register
 byte cvr[20]; // raw cell voltages register
@@ -66,6 +60,10 @@ bool write_config = true;
 
 static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3);
 
+// Function prototypes
+void printCellVoltages();
+void measure(const byte cmd); // call before reading values to start conversion
+void readValues(const byte cmd, const byte numOfRegisters, byte *const arr); // call after measure to read values from specified registers
 void writeConfig();
 
 void writeConfig() {
@@ -116,8 +114,6 @@ void setup() {
   Serial.println("System Booted");
 }
 
-// Function prototypes
-void printCellVoltages();
 
 void printCellVoltages(){
   word cellvolts[12];
@@ -164,9 +160,10 @@ void printCellVoltages(){
   Serial.println(cellvolts[11] * 1.5 / 1000);
 }
 
-void measure(const byte cmd); // call before reading values to start conversion
 void measure(const byte cmd)
 {
+  // sends a single byte command to LTC6802 to start conversion
+
   SPI.beginTransaction(spiSettings);
   digitalWrite(CS, LOW);
 
@@ -177,9 +174,10 @@ void measure(const byte cmd)
   sleep(0.0022); //delay to ensure measurement is complete before reading
 }
 
-void readValues(const byte cmd, const byte numOfRegisters, byte *const arr); // call after measure to read values from specified registers
 void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
 {
+  // reads values from specified register into provided array. Will retry if communication error.
+
   do
   {
     SPI.beginTransaction(spiSettings);
@@ -191,7 +189,7 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
 
     for (int i = 0; i < numOfRegisters; ++i) // Read the specified number of registers into the provided array
     {
-      arr[i] = SPI.transfer(0x00); // should this be 0x00 instead of cmd?
+      arr[i] = SPI.transfer(cmd); // should this be 0x00 instead of cmd?
       Serial.print("  Register ");      Serial.print(i);
       Serial.print(": 0x");      Serial.print(arr[i], HEX);
     }
@@ -228,13 +226,15 @@ void loop() {
     cfr[i]=0;
   }
 
-  // //write config register every 10 seconds TODO add contidion for pull up or down
+  //write config register every 10 seconds TODO add contidion for pull up or down
   // if(millis() - t1 >= 10000){
-  //   //write config
-  //   Serial.println("10s");
+  //   writeConfig();
+  //   Serial.println("Wrote CFR");
   //   t1 = millis();
-
   // }
+
+  writeConfig();
+  Serial.println("Wrote CFR");
 
   //print current registers
   Serial.println("-----");
@@ -263,40 +263,30 @@ void loop() {
   Serial.println();
   Serial.println("-----");
 
-  // //read spi registers
-  // Serial.println("Reading SPI Registers...");
-  // SPI.beginTransaction(spiSettings);
-  // digitalWrite(CS, LOW); //pull CS low to start communication
-  // sleep(0.0022); //delay to ensure SPI is ready
-  // Serial.println("Temp convertion...");
-  // SPI.transfer(0x30); //temperature conversion
-  // sleep(0.0022);
-  // Serial.println("Reading temperature...");
-  // tmp = SPI.transfer(0x08); //read temperature
-  // sleep(0.002);
-  // Serial.println("Voltage conversion...");
-  // SPI.transfer(0x10); //voltage conversion
-  // sleep(0.0022);
-  // Serial.println("Reading cell voltages...");
-  // cvr = SPI.transfer(0x04); //read cell voltages
-  // sleep(0.0022);
-  // Serial.println("Reading config register...");
-  // cfr = SPI.transfer(0x02); //read config register
-  // sleep(0.002);
-  // digitalWrite(CS, HIGH); //pull CS high to end communication
-  // SPI.endTransaction();
-
   Serial.println("Reading SPI Registers...");
-  Serial.println("Temp conversion...");
-  measure(0x30); //temperature conversion
-  Serial.println("Reading temperature...");
-  readValues(0x08, 8, tmp); //read temperature
-  Serial.println("Voltage conversion...");
-  measure(0x10); //voltage conversion
-  Serial.println("Reading cell voltages...");
+  // voltage conversion and reading
+  measure(0x10); //start voltage conversion (all cells)
   readValues(0x04, 20, cvr); //read cell voltages
-  Serial.println("Reading config register...");
-  readValues(0x02, 8, cfr); //read config register
+
+  //temperature conversion and reading
+  measure(0x30); //start temperature conversion (all temps)
+  readValues(0x08, 7, tmp); //read temperatures
+
+  //config register reading
+  readValues(0x02, 8, cfr); //read config registers
+
+
+
+  // Serial.println("Temp conversion...");
+  // measure(0x30); //temperature conversion
+  // Serial.println("Reading temperature...");
+  // readValues(0x08, 8, tmp); //read temperature
+  // Serial.println("Voltage conversion...");
+  // measure(0x10); //voltage conversion
+  // Serial.println("Reading cell voltages...");
+  // readValues(0x04, 20, cvr); //read cell voltages
+  // Serial.println("Reading config register...");
+  // readValues(0x02, 8, cfr); //read config register
 
   //print results
   Serial.print("Cell Voltages: ");
@@ -318,7 +308,7 @@ void loop() {
   Serial.println();
   Serial.println("-----");
 
-  delay(5000); //wait 5 seconds before next loop
+  delay(10000); //wait 5 seconds before next loop
 
 }
 

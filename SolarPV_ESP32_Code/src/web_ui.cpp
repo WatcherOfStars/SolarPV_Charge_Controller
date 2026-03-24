@@ -318,6 +318,12 @@ void WebUI::onNotify(char* topic, char* message) {
 		ESPUI.updateSwitcher(toggle_fan_switcher, doc["Toggle_Fan"]);
 
 		//update labels based on message
+		//debut print to verify message parsing
+		Serial.print("WebUI recieved Shunt_Voltage: ");
+		Serial.println(doc["Shunt_Voltage"].as<const char*>());
+		Serial.print("WebUI recieved Shunt_Current: ");
+		Serial.println(doc["Shunt_Current"].as<const char*>());
+
 		ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
 		ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
 		ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
