@@ -76,12 +76,6 @@ void writeConfig() {
 	writecfr[4]=(mci>>4);
 	writecfr[5]=vuv;
 	writecfr[6]=vov;
-  Serial.print("Config Register to Write: ");
-  for (int i=0; i<6; i++){
-    Serial.print(writecfr[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
 
   digitalWrite(CS, LOW); //pull CS low to start communication
   SPI.beginTransaction(spiSettings);
@@ -91,7 +85,6 @@ void writeConfig() {
   {
     SPI.transfer(writecfr[i]); //send config register bytes
   }
-  sleep(0.0022); //delay to ensure config is written before ending transaction
 
   SPI.endTransaction();
   digitalWrite(CS, HIGH); //pull CS high to end communication
@@ -174,11 +167,10 @@ void measure(const byte cmd)
   digitalWrite(CS, LOW);
 
   SPI.transfer(cmd);
-  sleep(0.0022); //delay to ensure measurement is complete before reading
-
 
   digitalWrite(CS, HIGH);
   SPI.endTransaction();
+  sleep(0.0022); //delay to ensure measurement is complete before reading
 }
 
 void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
@@ -204,11 +196,11 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
     (void)SPI.transfer(cmd); // Read and intentionally discard PEC byte
     Serial.println("  (PEC byte discarded)");
 
-    sleep(0.0022);
     digitalWrite(CS, HIGH);
     SPI.endTransaction();
   }
   while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
+  sleep(0.0022);
 }
 
 
