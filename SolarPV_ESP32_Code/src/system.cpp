@@ -64,6 +64,8 @@ void SystemManager::setupSystem() {
     ledcSetup(0, 5000, 8); // Setup PWM for fan control (channel 0, 5 kHz frequency, 8-bit resolution)
     ledcAttachPin(FAN_PIN, 0); // Attach the fan control pin to the PWM channel
 
+    digitalWrite(RESTART_PIN, HIGH); // write high to prevent shutdown until a restart is triggered
+
     
     // Setup (-1 error, 0 not attempted, 1 success)
     ina226Status = setupINA226();
@@ -362,7 +364,8 @@ void SystemManager::onNotify(char* topic, char* message) {
     if (strcmp(topic, "Restart_System") == 0) {
         std::cout << "Handling System_Reboot with message: " << message << std::endl;
         Serial.println("Rebooting system...");
-        ESP.restart(); // Reboot the ESP32
+        digitalWrite(RESTART_PIN, LOW); // restart pin to shut down the system
+        delay(1000);
     }
 
     // HANDLE MANUAL TOGGLES

@@ -55,7 +55,7 @@ void WebUI::setupWebUI(){
 	main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
 	ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
 	ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "", "Restart_System", Wetasphalt, main_button, my_updateObserversCallback);
+	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, main_button, my_updateObserversCallback);
 
 
 	test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
