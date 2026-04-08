@@ -7,6 +7,7 @@
 #include <observer.h>
 #include <broker.h>
 #include <system.h>
+#include <config.h>
 
 
 // Create global objects
@@ -28,7 +29,7 @@ class mainEventHandler : public observer {
 private:
     // Internal state variables can be added here
 public:
-    void onNotify(char* topic, char* message) override;
+    void onNotify(const char* topic, const char* message) override;
 };
 
 #endif

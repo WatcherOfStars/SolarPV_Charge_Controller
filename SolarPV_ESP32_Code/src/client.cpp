@@ -86,7 +86,7 @@ void MqttClientManager::registerObserver(observer* obs) {
 void MqttClientManager::removeObserver(observer* obs) {
     observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
-void MqttClientManager::notifyObservers(char* topic, char* message) {
+void MqttClientManager::notifyObservers(const char* topic, const char* message) {
     std::cout << "Notifying MQTT Client Observers for topic: " << topic << std::endl;
     std::cout << "Message: " << message << std::endl;   
     for (auto& obs : observers) {

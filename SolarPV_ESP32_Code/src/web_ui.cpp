@@ -130,6 +130,25 @@ void WebUI::setupWebUI(){
 	// ESPUI.addControl(Min, "", "10", None, mainNumber);
 	// ESPUI.addControl(Max, "", "50", None, mainNumber);
 
+	/*
+	* Tab: System Setup
+	* Contains step-by-step instructions to fully set up the system
+	*-----------------------------------------------------------------------------------------------------------*/
+	auto systemSetupTab = ESPUI.addControl(Tab, "", "System Setup");
+	ESPUI.addControl(Label, "Step 1", "Disable all system flags before setup.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 2", "Configure connection to LAN if desired using the WiFi credentials tab.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 3", "Verify system reboots, then hold power button to restart. If WiFi credentials were changed, new IP address will be 10.16.204.165.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 4", "Enable fan in main controls tab and verify it turns on.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 5", "Enable RTC and set time.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 6", "Ensure battery(-) is physically disconnected, connect solar. Enable solar in the main controls tab and verify voltage with multimeter. Then enable load and verify voltage.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 7", "Disconnect solar and loads, disable all FETs. Connect the battery to battery(+) and battery(-) and the BMS to SPI pins. Enable the BMS in the main controls tab. Verify cell voltage and temperature readings.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 8", "Verify cell balancing over 1 hour.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 9", "Physically connect and then enable loads in the main control tab. Draw known power and verify current readings.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 10", "Physically connect and then enable solar in the main control tab. Verify current reading and cells charging.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 11", "Charge batteries to max. Verify charging stops.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 12", "Drain batteries with load. Verify charging resumes, then disable solar FETs to achieve full drain to min. Verify loads disconnect when battery is depleted.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 13", "Reconnect and re-enable all system flags. Verify full operation.", None, systemSetupTab);
+
 
 	/*
 	* Tab: WiFi Credentials
@@ -293,12 +312,16 @@ void WebUI::updateObserversCallback(Control *sender, int type) {
 }
 
 // WebUI Observer implementation
-void WebUI::onNotify(char* topic, char* message) {
+void WebUI::onNotify(const char* topic, const char* message) {
 	//This function is called when an MQTT message is received.
 	// Serial.print("WebUI received notification on topic: ");
 	// Serial.print(topic);
 	// Serial.print(" with message: ");
 	// Serial.println(message);
+	if (topic == nullptr || message == nullptr) {
+		Serial.println("WebUI onNotify received null topic or message");
+		return;
+	}
 
 	//Handle toggle value updates
 	if (strcmp(topic, "system_update/data") == 0) {
@@ -311,11 +334,15 @@ void WebUI::onNotify(char* topic, char* message) {
 			Serial.println(error.c_str());
 			return;
 		}
+		if (!doc.is<JsonObject>()) {
+			Serial.println("system_update/data payload is not a JSON object");
+			return;
+		}
 
 		// update switchers based on message
-		ESPUI.updateSwitcher(toggle_solar_switcher, doc["Toggle_Solar_FETs"]);
-		ESPUI.updateSwitcher(toggle_load_switcher, doc["Toggle_Load_FETs"]);
-		ESPUI.updateSwitcher(toggle_fan_switcher, doc["Toggle_Fan"]);
+		if (!doc["Toggle_Solar_FETs"].isNull()) ESPUI.updateSwitcher(toggle_solar_switcher, doc["Toggle_Solar_FETs"]);
+		if (!doc["Toggle_Load_FETs"].isNull()) ESPUI.updateSwitcher(toggle_load_switcher, doc["Toggle_Load_FETs"]);
+		if (!doc["Toggle_Fan"].isNull()) ESPUI.updateSwitcher(toggle_fan_switcher, doc["Toggle_Fan"]);
 
 		//update labels based on message
 		//debut print to verify message parsing
@@ -324,14 +351,22 @@ void WebUI::onNotify(char* topic, char* message) {
 		Serial.print("WebUI recieved Shunt_Current: ");
 		Serial.println(doc["Shunt_Current"].as<const char*>());
 
-		ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
-		ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
-		ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
-		ESPUI.updateLabel(cell_voltages_label, doc["Cell_Voltages"]);
-		ESPUI.updateLabel(cell_temperatures_label, doc["Cell_Temperatures"]);
-		ESPUI.updateLabel(ina226_status_label, doc["INA226_Status"]);
-		ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
-		ESPUI.updateLabel(bms_status_label, doc["BMS_Status"]);
+		if (!doc["RTC_Time"].isNull()) ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
+		if (!doc["Shunt_Voltage"].isNull()) ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
+		if (!doc["Shunt_Current"].isNull()) ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
+		String cellVoltagesText;
+		String cellTemperaturesText;
+		if (doc["Cell_Voltages"].is<JsonArray>() || doc["Cell_Voltages"].is<JsonVariantConst>()) {
+			serializeJson(doc["Cell_Voltages"], cellVoltagesText);
+			ESPUI.updateLabel(cell_voltages_label, cellVoltagesText);
+		}
+		if (doc["Cell_Temperatures"].is<JsonArray>() || doc["Cell_Temperatures"].is<JsonVariantConst>()) {
+			serializeJson(doc["Cell_Temperatures"], cellTemperaturesText);
+			ESPUI.updateLabel(cell_temperatures_label, cellTemperaturesText);
+		}
+		if (!doc["INA226_Status"].isNull()) ESPUI.updateLabel(ina226_status_label, doc["INA226_Status"]);
+		if (!doc["RTC_Status"].isNull()) ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
+		if (!doc["BMS_Status"].isNull()) ESPUI.updateLabel(bms_status_label, doc["BMS_Status"]);
 	}
 
 	//Handle system flag updates
@@ -346,14 +381,18 @@ void WebUI::onNotify(char* topic, char* message) {
 			Serial.println(error.c_str());
 			return;
 		}
+		if (!doc.is<JsonObject>()) {
+			Serial.println("system_update/flags payload is not a JSON object");
+			return;
+		}
 
 		//update flags based on message
-		ESPUI.updateSwitcher(enable_bms_switcher, doc["Enable_BMS"]);
-		ESPUI.updateSwitcher(enable_rtc_switcher, doc["Enable_RTC"]);
-		ESPUI.updateSwitcher(enable_ina226_switcher, doc["Enable_INA226"]);
-		ESPUI.updateSwitcher(enable_solar_switcher, doc["Enable_Solar_FETs"]);
-		ESPUI.updateSwitcher(enable_load_switcher, doc["Enable_Load_FETs"]);
-		ESPUI.updateSwitcher(enable_fan_switcher, doc["Enable_Fan"]);
+		if (!doc["Enable_BMS"].isNull()) ESPUI.updateSwitcher(enable_bms_switcher, doc["Enable_BMS"]);
+		if (!doc["Enable_RTC"].isNull()) ESPUI.updateSwitcher(enable_rtc_switcher, doc["Enable_RTC"]);
+		if (!doc["Enable_INA226"].isNull()) ESPUI.updateSwitcher(enable_ina226_switcher, doc["Enable_INA226"]);
+		if (!doc["Enable_Solar_FETs"].isNull()) ESPUI.updateSwitcher(enable_solar_switcher, doc["Enable_Solar_FETs"]);
+		if (!doc["Enable_Load_FETs"].isNull()) ESPUI.updateSwitcher(enable_load_switcher, doc["Enable_Load_FETs"]);
+		if (!doc["Enable_Fan"].isNull()) ESPUI.updateSwitcher(enable_fan_switcher, doc["Enable_Fan"]);
 	}
 }
 
@@ -365,7 +404,7 @@ void WebUI::registerObserver(observer* obs) {
 void WebUI::removeObserver(observer* obs) {
 	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
-void WebUI::notifyObservers(char* topic, char* message) {
+void WebUI::notifyObservers(const char* topic, const char* message) {
 	// std::cout << "Notifying WebUI Observers for topic: " << topic << std::endl;
 	// std::cout << "Message: " << message << std::endl;
 	for (auto& obs : observers) {

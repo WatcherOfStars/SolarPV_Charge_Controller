@@ -356,7 +356,7 @@ void SystemManager::fanControl(bool state){
     ledcWrite(0, state ? (FAN_DUTY_CYCLE * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
 }
 
-void SystemManager::onNotify(char* topic, char* message) {
+void SystemManager::onNotify(const char* topic, const char* message) {
     // Handle WebUI notifications here
     std::cout << "Sys received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
 
@@ -454,7 +454,7 @@ void SystemManager::sendUpdatesToWebUI(){
     flagsDoc["Enable_INA226"] = (int)sys_flags.ENABLE_INA226;
     std::string flagsOut;
     serializeJson(flagsDoc, flagsOut);
-    notifyObservers((char*)"system_update/flags", (char*)flagsOut.c_str());
+    notifyObservers("system_update/flags", flagsOut.c_str());
 
     // Build JSON for data using ArduinoJson
     JsonDocument dataDoc;
@@ -488,7 +488,7 @@ void SystemManager::sendUpdatesToWebUI(){
 
     std::string dataOut;
     serializeJson(dataDoc, dataOut);
-    notifyObservers((char*)"system_update/data", (char*)dataOut.c_str());
+    notifyObservers("system_update/data", dataOut.c_str());
 }
 
 // System Subject implementation
@@ -499,7 +499,7 @@ void SystemManager::registerObserver(observer* obs) {
 void SystemManager::removeObserver(observer* obs) {
 	observers.erase(std::remove(observers.begin(), observers.end(), obs), observers.end());
 }
-void SystemManager::notifyObservers(char* topic, char* message) {
+void SystemManager::notifyObservers(const char* topic, const char* message) {
 	// std::cout << "Notifying System Observers for topic: " << topic << std::endl;
 	// std::cout << "Message: " << message << std::endl;
 	for (auto& obs : observers) {

@@ -8,7 +8,7 @@ using namespace constants;
 
 
 // Event handler methods
-void mainEventHandler::onNotify(char* topic, char* message) {
+void mainEventHandler::onNotify(const char* topic, const char* message) {
     // Handle WebUI notifications here
     std::cout << "Main received WebUI notification for topic: " << topic << ", message: " << message << std::endl;
     if (strcmp(topic, "test/topic") == 0) {
@@ -36,6 +36,10 @@ void setup(){
 
   // Setup debug light pin
   pinMode(DEBUG_LIGHT, OUTPUT);
+
+  // Load configuration from JSON file
+  Serial.println("Loading configuration...");
+  //ConfigManager::getInstance().loadConfig("/config.json");
 
   // Setup system
   Serial.println("Setting up system...");
@@ -78,6 +82,7 @@ void loop() {
     Serial.println("Starting Sys Loop...");
 
 		sys.updateSystem();
+    //ConfigManager::getInstance().printConfig();
 		lastTime = millis();
     //Serial.println("Sys Loop Done!");
 	}

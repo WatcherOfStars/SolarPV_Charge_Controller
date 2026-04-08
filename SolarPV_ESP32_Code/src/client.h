@@ -53,7 +53,7 @@ public:
     void publishToTopic(const char* topic, const char* message); //publish a message to a topic, for testing purposes
     void registerObserver(observer* obs) override;
     void removeObserver(observer* obs) override;
-    void notifyObservers(char* topic, char* message) override;
+    void notifyObservers(const char* topic, const char* message) override;
 };
 
 #endif

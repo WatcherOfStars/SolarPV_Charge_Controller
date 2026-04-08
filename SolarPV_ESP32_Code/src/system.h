@@ -101,7 +101,7 @@ public:
 
     void registerObserver(observer* obs) override;
     void removeObserver(observer* obs) override;
-    void notifyObservers(char* topic, char* message) override;
+    void notifyObservers(const char* topic, const char* message) override;
 
     void getShuntData(); //to be called to get shunt data
     void getRTCData(); //to be called to get RTC data
@@ -110,7 +110,7 @@ public:
     void solarFETControl(bool state); //to control solar FETs
     void loadFETControl(bool state); //to control load FETs
     void fanControl(bool state); //to control cooling fan
-    void onNotify(char* topic, char* message) override;
+    void onNotify(const char* topic, const char* message) override;
 
 };
 
