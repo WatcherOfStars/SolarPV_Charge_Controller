@@ -10,6 +10,7 @@
 #define SCK 18
 #define CS 5
 #define BMS_ADDRESS 0x80
+#define VOUT_3_3V 17
 
 // Config register bitmasks and bit positions
 static const byte CFG0_WDT_BIT    = 7;    /**< Configuration register 0 watchdog timer bit. */
@@ -45,7 +46,7 @@ static const byte CFG3_MCI_INVMSK    = 0x00; /**< Configuration register 3 mask 
 byte cmnd[2]; // command register
 byte tmp[7]; // temperature register
 byte cvr[20]; // raw cell voltages register
-byte cfr[8]; // config read register
+byte cfr[6]; // config read register
 byte writecfr[6]; // config write register
 byte cv[13]; // calculated cell voltage register
 
@@ -67,15 +68,13 @@ void writeConfig();
 
 void writeConfig() {
   // Writes config registers per guidelines in datasheet page 27
-  
   // Set configuration register values
-  writecfr[0]=1;
-	writecfr[1]=97;
-	writecfr[2]=(dcc&255);
-	writecfr[3]=((dcc>>8)|(mci<<4&240));
-	writecfr[4]=(mci>>4);
-	writecfr[5]=vuv;
-	writecfr[6]=vov;
+	writecfr[0]=0x61;
+	writecfr[1]=(dcc&255);
+	writecfr[2]=((dcc>>8)|(mci<<4&240));
+	writecfr[3]=(mci>>4);
+	writecfr[4]=vuv;
+	writecfr[5]=vov;
   Serial.print("Config Register to Write: ");
   for (int i=0; i<6; i++){
     Serial.print(writecfr[i], HEX);
@@ -83,18 +82,22 @@ void writeConfig() {
   }
   Serial.println();
 
-  digitalWrite(CS, LOW); //pull CS low to start communication
   SPI.beginTransaction(spiSettings);
+  digitalWrite(CS, LOW); //pull CS low to start communication
+  delayMicroseconds(1); //delay to ensure CS is registered before starting transaction
+  
   SPI.transfer(0x01); //send WRCFG byte
 
   for (int i = 0; i < 6; i++) //6 config registers
   {
     SPI.transfer(writecfr[i]); //send config register bytes
   }
-  sleep(0.0022); //delay to ensure config is written before ending transaction
+  delayMicroseconds(1); //delay to ensure config is written before ending transaction
 
-  SPI.endTransaction();
   digitalWrite(CS, HIGH); //pull CS high to end communication
+  SPI.endTransaction();
+  delayMicroseconds(1); 
+
 }
 
 void setup() {
@@ -102,7 +105,10 @@ void setup() {
   SPI.begin(SCK, MISO, MOSI);
 
   pinMode(CS, OUTPUT);
+  pinMode(VOUT_3_3V, OUTPUT);
   digitalWrite(CS, HIGH); //pull CS high to start
+  digitalWrite(VOUT_3_3V, HIGH); //turn on 3.3V output
+  delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
   //LTC6802::initSPI(MOSI, MISO, SCK);
 
   Serial.begin(115200);
@@ -172,12 +178,14 @@ void measure(const byte cmd)
 
   SPI.beginTransaction(spiSettings);
   digitalWrite(CS, LOW);
+    delayMicroseconds(1); //delay
 
   SPI.transfer(cmd);
-  sleep(0.0022); //delay to ensure measurement is complete before reading
+  delayMicroseconds(1); //delay to ensure measurement is complete before reading
 
 
   digitalWrite(CS, HIGH);
+  delayMicroseconds(1); //delay to ensure transaction is complete before ending transaction
   SPI.endTransaction();
 }
 
@@ -189,6 +197,7 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
   {
     SPI.beginTransaction(spiSettings);
     digitalWrite(CS, LOW);
+    delayMicroseconds(1); //delay to ensure CS is registered before starting transaction
 
     SPI.transfer(cmd); // Send the command to read the specified registers
     Serial.print("Reading command: 0x");
@@ -197,16 +206,18 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
 
     for (int i = 0; i < numOfRegisters; ++i) // Read the specified number of registers into the provided array
     {
-      arr[i] = SPI.transfer(cmd); // should this be 0x00 instead of cmd?
-      Serial.print("  Register ");      Serial.print(i);
-      Serial.print(": 0x");      Serial.print(arr[i], HEX);
+      arr[i] = SPI.transfer(0x00); // should this be 0x00 instead of cmd?
+      Serial.print(arr[i], HEX);
+      Serial.print(" ");
     }
-    (void)SPI.transfer(cmd); // Read and intentionally discard PEC byte
+    (void)SPI.transfer(0x00); // Read and intentionally discard PEC byte
     Serial.println("  (PEC byte discarded)");
 
-    sleep(0.0022);
+    delayMicroseconds(1); //delay to ensure reading is complete before ending transaction
     digitalWrite(CS, HIGH);
     SPI.endTransaction();
+    delayMicroseconds(1); //delay to ensure transaction is complete before ending transaction
+
   }
   while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
 }
@@ -273,15 +284,15 @@ void loop() {
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading
-  measure(0x10); //start voltage conversion (all cells)
-  readValues(0x04, 20, cvr); //read cell voltages
+  //measure(0x10); //start voltage conversion (all cells)
+  //readValues(0x04, 20, cvr); //read cell voltages
 
   //temperature conversion and reading
   // measure(0x30); //start temperature conversion (all temps)
   // readValues(0x08, 7, tmp); //read temperatures
 
   //config register reading
-  readValues(0x02, 8, cfr); //read config registers
+  readValues(0x02, 6, cfr); //read config registers
 
 
 
@@ -298,7 +309,7 @@ void loop() {
 
   //print results
   Serial.print("Cell Voltages: ");
-  printCellVoltages();
+  //printCellVoltages();
   // for (int i=0; i<=19; i++){
   //   Serial.print(cvr[i]);
     
@@ -310,13 +321,14 @@ void loop() {
   // }
   Serial.println();
   Serial.print("Config Register: ");
-  for (int i=0; i<=7; i++){
-    Serial.print(cfr[i]);
+  for (int i=0; i<6; i++){
+    Serial.print(cfr[i], HEX);
+    Serial.print(" ");
   }
   Serial.println();
   Serial.println("-----");
 
-  delay(8000); //wait 8 seconds before next loop
+  delay(2000); //wait 2 seconds before next loop
 
 }
 
