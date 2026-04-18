@@ -6,13 +6,13 @@
 #include <algorithm>
 #include <iostream>
 #include <ArduinoJson.h>
-#include <LTC6802.h>
+#include "ltc6802.h"
 
 using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 0, 
+    ENABLE_BMS: 1, 
     ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
@@ -39,10 +39,8 @@ int SystemManager::bmsStatus = 0;
 
 INA226 ina(0x40); // Create an INA226 object with the default I2C address
 RTC_DS3231 rtc; // create clock object
-static LTC6802 bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // create battery management system object
 
 float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
-
 
 
 void SystemManager::setupSystem() {
@@ -133,15 +131,7 @@ int SystemManager::setupBMS(){
         return 0; // BMS setup not attempted
     }
 
-    //bms = LTC6802(BMS_ADDRESS, BMS_CS_PIN); // Initialize the BMS object with the I2C address and Wire instance
-    LTC6802::initSPI(BMS_MOSI_PIN, BMS_MISO_PIN, BMS_CLK_PIN); // Initialize the SPI bus for the BMS
-    bms.cfgRead();         // Read configuration from chip
-    bms.cfgSetCDC(1);      // Measure mode 13ms
-    bms.cfgSetMCI(0x0fff); // Disable interrupts
-    bms.cfgWrite(false);   // Write configuration back to chip
-    Serial.println("Initialized chip");
-    
-    return 1; // Return success code
+    return setupLTC6802(); // setup LTC6802 BMS
 }
 
 void SystemManager::updateSystem() {
@@ -318,19 +308,16 @@ void SystemManager::getRTCData(){
 
 // updates the battery management system depending if it's an even or odd day
 void SystemManager::updateBMS() {
-    bms.cfgWrite(false);          // Write configuration back to chip, because chip resets these every 2.5s when nothing happens on SPI
-    bms.temperatureMeasure();     // Measure temperatures on chip
-    bms.temperatureRead();        // Read temperatures from chip
-    bms.temperatureDebugOutput(); // Send temperatures to serial
-    bms.cellsMeasure();           // Measure cell voltages on chip
-    bms.cellsRead();              // Read cell voltages from chip
-    bms.cellsDebugOutput();       // Send cell voltages to serial
+    updateLTC6802(); // update LTC6802 BMS
 }
 
 // gets cell voltages and temperatures from the BMS
 void SystemManager::getBMSData(){
-    // Placeholder for BMS data retrieval logic
-    updateBMS(); // TEMPORARY!
+    // BMS data retrieval logic
+    auto cellVoltages = getCellVoltages(); // get cell voltages from LTC6802
+    for (int i = 0; i < 6; ++i) {
+        systemData.bmsData.cellVoltages[i] = cellVoltages[i];
+    }
 }
 
 int SystemManager::performSafetyChecks(){

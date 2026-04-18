@@ -20,8 +20,7 @@ MqttClientManager client; // Create ClientManager object
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
 namespace constants {
-    inline constexpr int SLOW_BOOT = 0; //Delay booting to give time to connect a serial monitor
-    inline constexpr int DEBUG_LIGHT = 2; // Pin for debug light
+    inline const int SLOW_BOOT = ConfigManager::getInstance().deviceConfig.slow_boot; //Delay booting to give time to connect a serial monitor
 }
 
 //class definitions

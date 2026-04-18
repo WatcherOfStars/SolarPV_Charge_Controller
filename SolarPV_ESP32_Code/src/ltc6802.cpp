@@ -2,41 +2,9 @@
 #include <SPI.h>
 #include <iostream>
 #include <bitset>
-//#include <LTC6802.h>
+#include "ltc6802.h"
 
-// Define SPI pins, make sure CS is pulled low
-#define MOSI 23
-#define MISO 19
-#define SCK 18
-#define CS 5
-#define BMS_ADDRESS 0x80
-
-// Config register bitmasks and bit positions
-static const byte CFG0_WDT_BIT    = 7;    /**< Configuration register 0 watchdog timer bit. */
-static const byte CFG0_GPIO2_BIT  = 6;    /**< Configuration register 0 GPIO2 bit. */
-static const byte CFG0_GPIO1_BIT  = 5;    /**< Configuration register 0 GPIO1 bit. */
-static const byte CFG0_LVLPL_BIT  = 4;    /**< Configuration register 0 level polling mode bit. */
-static const byte CFG0_CELL10_BIT = 3;    /**< Configuration register 0 10-cell mode bit. */
-static const byte CFG0_WDT_MSK    = 0x80; /**< Configuration register 0 watchdog timer bitmask. */
-static const byte CFG0_GPIO2_MSK  = 0x40; /**< Configuration register 0 GPIO2 bitmask. */
-static const byte CFG0_GPIO1_MSK  = 0x20; /**< Configuration register 0 GPIO1 bitmask. */
-static const byte CFG0_LVLPL_MSK  = 0x10; /**< Configuration register 0 level polling bitmask. */
-static const byte CFG0_CELL10_MSK = 0x08; /**< Configuration register 0 10-cell mode bitmask. */
-static const byte CFG0_CDC_MSK    = 0x07; /**< Configuration register 0 comparator duty cycle bitmask. */
-static const byte CFG1_DCC_MSK    = 0xff; /**< Configuration register 1 discharge cell bitmask. */
-static const byte CFG2_DCC_MSK    = 0x0f; /**< Configuration register 2 discharge cell bitmask. */
-static const byte CFG2_MCI_MSK    = 0xf0; /**< Configuration register 2 mask cell interrupts bitmask. */
-static const byte CFG3_MCI_MSK    = 0xff; /**< Configuration register 3 mask cell interrupts bitmask. */
-static const byte CFG0_WDT_INVMSK    = 0x7f; /**< Configuration register 0 watchdog timer inverse bitmask. */
-static const byte CFG0_GPIO2_INVMSK  = 0xbf; /**< Configuration register 0 GPIO2 inverse bitmask. */
-static const byte CFG0_GPIO1_INVMSK  = 0xdf; /**< Configuration register 0 GPIO1 inverse bitmask. */
-static const byte CFG0_LVLPL_INVMSK  = 0xef; /**< Configuration register 0 level polling mode inverse bitmask. */
-static const byte CFG0_CELL10_INVMSK = 0xf7; /**< Configuration register 0 10-cell mode inverse bitmask. */
-static const byte CFG0_CDC_INVMSK    = 0xf8; /**< Configuration register 0 comparator duty cycle inverse bitmask. */
-static const byte CFG1_DCC_INVMSK    = 0x00; /**< Configuration register 1 discharge cell inverse bitmask. */
-static const byte CFG2_DCC_INVMSK    = 0xf0; /**< Configuration register 2 discharge cell inverse bitmask. */
-static const byte CFG2_MCI_INVMSK    = 0x0f; /**< Configuration register 2 mask cell interrupts inverse bitmask. */
-static const byte CFG3_MCI_INVMSK    = 0x00; /**< Configuration register 3 mask cell interrupts inverse bitmask. */
+using namespace constants;
 
 // Instantiate LTC6802 object
 //static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
@@ -59,68 +27,59 @@ float t1 = 0;
 
 static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3);
 
-// Function prototypes
-void printCellVoltages();
-void measure(const byte cmd); // call before reading values to start conversion
-void readValues(const byte cmd, const byte numOfRegisters, byte *const arr); // call after measure to read values from specified registers
-void writeConfig();
-void printDecodedConfigView();
 
-void writeConfig() {
-  // Writes config registers per guidelines in datasheet page 27
-  // Set configuration register values
-	writecfr[0]=0x61;
-	writecfr[1]=(dcc&255);
-	writecfr[2]=((dcc>>8)|(mci<<4&240));
-	writecfr[3]=(mci>>4);
-	writecfr[4]=vuv;
-	writecfr[5]=vov;
-  Serial.print("Config Register to Write: ");
-  for (int i=0; i<6; i++){
-    Serial.print(writecfr[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
-
-  SPI.beginTransaction(spiSettings);
-  digitalWrite(CS, LOW); //pull CS low to start communication
-  
-  SPI.transfer(0x01); //send WRCFG byte
-
-  for (int i = 0; i < 6; i++) //6 config registers
-  {
-    SPI.transfer(writecfr[i]); //send config register bytes
-  }
-
-  digitalWrite(CS, HIGH); //pull CS high to end communication
-  SPI.endTransaction();
-
-}
-
-void setup() {
+int setupLTC6802() {
   //start SPI
-  SPI.begin(SCK, MISO, MOSI);
+  SPI.begin(BMS_SCK, BMS_MISO, BMS_MOSI);
 
-  pinMode(CS, OUTPUT);
-  digitalWrite(CS, HIGH); //pull CS high to start
+  pinMode(BMS_CS, OUTPUT);
+  digitalWrite(BMS_CS, HIGH); //pull CS high to start
   delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
-  //LTC6802::initSPI(MOSI, MISO, SCK);
-
-  Serial.begin(115200);
   
   cvr[0]=0;
   cfr[0]=0;
   cfr[1]=2;
   cmnd[0] = 0;
 
-  writeConfig();
+  writeLTCConfig();
 
   //start timer
   t1 = millis();
 
-  Serial.println("System Booted");
+  Serial.println("LTC6802 Setup Complete");
+  return 1; // Return success code
 }
 
+void writeLTCConfig() {
+    // Writes config registers per guidelines in datasheet page 27
+    // Set configuration register values
+    writecfr[0]=0x61;
+    writecfr[1]=(dcc&255);
+    writecfr[2]=((dcc>>8)|(mci<<4&240));
+    writecfr[3]=(mci>>4);
+    writecfr[4]=vuv;
+    writecfr[5]=vov;
+    // Serial.print("Config Register to Write: ");
+    // for (int i=0; i<6; i++){
+    //     Serial.print(writecfr[i], HEX);
+    //     Serial.print(" ");
+    // }
+    //Serial.println();
+
+    SPI.beginTransaction(spiSettings);
+    digitalWrite(BMS_CS, LOW); //pull CS low to start communication
+
+    SPI.transfer(0x01); //send WRCFG byte
+
+    for (int i = 0; i < 6; i++) //6 config registers
+    {
+        SPI.transfer(writecfr[i]); //send config register bytes
+    }
+
+    digitalWrite(BMS_CS, HIGH); //pull CS high to end communication
+    SPI.endTransaction();
+
+}
 
 void printCellVoltages(){
   word cellvolts[12];
@@ -167,21 +126,49 @@ void printCellVoltages(){
   Serial.println(cellvolts[11] * 1.5 / 1000);
 }
 
-void measure(const byte cmd)
+uint8_t* getCellVoltages() {
+    static uint8_t cellVolts[12];
+    word cellvolts[12];
+    cellvolts[0] = cvr[0] | ((cvr[1] & 0x0F) << 8);
+    cellvolts[1] = ((cvr[1] & 0xf0) >> 4) | (cvr[2] << 4);
+
+    cellvolts[2] = cvr[3] | ((cvr[4] & 0x0F) << 8);
+    cellvolts[3] = ((cvr[4] & 0xf0) >> 4) | (cvr[5] << 4);
+
+    cellvolts[4] = cvr[6] | ((cvr[7] & 0x0F) << 8);
+    cellvolts[5] = ((cvr[7] & 0xf0) >> 4) | (cvr[8] << 4);
+
+    cellvolts[6] = cvr[9] | ((cvr[10] & 0x0F) << 8);
+    cellvolts[7] = ((cvr[10] & 0xf0) >> 4) | (cvr[11] << 4);
+
+    cellvolts[8] = cvr[12] | ((cvr[13] & 0x0F) << 8);
+    cellvolts[9] = ((cvr[13] & 0xf0) >> 4) | (cvr[14] << 4);
+
+    cellvolts[10] = cvr[15] | ((cvr[16] & 0x0F) << 8);
+    cellvolts[11] = ((cvr[16] & 0xf0) >> 4) | (cvr[17] << 4);
+
+    for (int i = 0; i < 12; i++) {
+        cellVolts[i] = (uint8_t)(cellvolts[i] * 1.5 / 1000);
+    }
+
+    return cellVolts;
+}
+
+void startLTC6802Conversion(const byte cmd)
 {
   // sends a single byte command to LTC6802 to start conversion
 
   SPI.beginTransaction(spiSettings);
-  digitalWrite(CS, LOW);
+  digitalWrite(BMS_CS, LOW);
 
   SPI.transfer(cmd);
 
-  digitalWrite(CS, HIGH);
+  digitalWrite(BMS_CS, HIGH);
   SPI.endTransaction();
 
 }
 
-void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
+void readLTC6802(const byte cmd, const byte numOfRegisters, byte *const arr)
 {
   // reads values from specified register into provided array. Will retry if communication error.
   Serial.print("Reading command: 0x");
@@ -190,7 +177,7 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
   do
   {
     SPI.beginTransaction(spiSettings);
-    digitalWrite(CS, LOW);
+    digitalWrite(BMS_CS, LOW);
 
     SPI.transfer(cmd); // Send the command to read the specified registers
     
@@ -200,7 +187,7 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
     }
     (void)SPI.transfer(cmd); // Read and intentionally discard PEC byte
 
-    digitalWrite(CS, HIGH);
+    digitalWrite(BMS_CS, HIGH);
     SPI.endTransaction();
 
     for (int i = 0; i < numOfRegisters; ++i) // Print the read values for debugging
@@ -214,7 +201,7 @@ void readValues(const byte cmd, const byte numOfRegisters, byte *const arr)
   while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
 }
 
-void printDecodedConfigView()
+void displayLTC6802Config()
 {
   const byte expectedCfg0 = writecfr[0];
   const byte readCfg0 = cfr[0];
@@ -262,25 +249,20 @@ void printDecodedConfigView()
 }
 
 
-void loop() {
-  Serial.println("Starting Main Loop...");
+void updateLTC6802() {
 
-  //write config register every 10 seconds TODO add contidion for pull up or down
-  // if(millis() - t1 >= 10000){
-  //   writeConfig();
-  //   Serial.println("Wrote CFR");
-  //   t1 = millis();
-  // }
-
-  writeConfig();
-  Serial.println("Wrote CFR");
-
+  //write config register every 2 seconds TODO add contidion for pull up or down
+  if(millis() - t1 >= 2000){
+    writeLTCConfig();
+    Serial.println("Wrote CFR");
+    t1 = millis();
+  }
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading
-  measure(0x10); //start voltage conversion (all cells)
+  startLTC6802Conversion(0x10); //start voltage conversion (all cells)
   delay(10); //delay to ensure conversion is complete before reading
-  readValues(0x04, 20, cvr); //read cell voltages
+  readLTC6802(0x04, 20, cvr); //read cell voltages
 
   //temperature conversion and reading
   // measure(0x30); //start temperature conversion (all temps)
@@ -288,7 +270,7 @@ void loop() {
   // readValues(0x08, 7, tmp); //read temperatures
 
   //config register reading
-  readValues(0x02, 6, cfr); //read config registers
+  readLTC6802(0x02, 6, cfr); //read config registers
 
 
   //print results
@@ -311,7 +293,4 @@ void loop() {
   //printDecodedConfigView();
   Serial.println("-----");
 
-  delay(2000); //wait 2 seconds before next loop
-
 }
-
