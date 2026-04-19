@@ -17,11 +17,6 @@ WebUI webUI; // Create WebUI object
 MqttClientManager client; // Create ClientManager object
 
 
-//consts
-// namespace constants { inline constexpr double PI = 3.14; }
-namespace constants {
-    inline const int SLOW_BOOT = ConfigManager::getInstance().deviceConfig.slow_boot; //Delay booting to give time to connect a serial monitor
-}
 
 //class definitions
 class mainEventHandler : public observer {

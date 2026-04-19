@@ -6,8 +6,10 @@
 
 using namespace constants;
 
-// Instantiate LTC6802 object
-//static LTC6802 bms = LTC6802(BMS_ADDRESS, CS);
+static int BMS_MOSI = 23;
+static int BMS_MISO = 19;
+static int BMS_SCK = 18;
+static int BMS_CS = 5;
 
 // Define registers for SPI communication
 byte cmnd[2]; // command register
@@ -29,25 +31,37 @@ static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3)
 
 
 int setupLTC6802() {
-  //start SPI
-  SPI.begin(BMS_SCK, BMS_MISO, BMS_MOSI);
+    //get config values from config manager
+    BMS_CS = ConfigManager::getInstance().deviceConfig.bms_cs_pin;
+    BMS_MOSI = ConfigManager::getInstance().deviceConfig.bms_mosi_pin;
+    BMS_MISO = ConfigManager::getInstance().deviceConfig.bms_miso_pin;
+    BMS_SCK = ConfigManager::getInstance().deviceConfig.bms_clk_pin;
 
-  pinMode(BMS_CS, OUTPUT);
-  digitalWrite(BMS_CS, HIGH); //pull CS high to start
-  delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
-  
-  cvr[0]=0;
-  cfr[0]=0;
-  cfr[1]=2;
-  cmnd[0] = 0;
+    //start SPI
+    SPI.begin(BMS_SCK, BMS_MISO, BMS_MOSI);
+    Serial.print("Initialized SPI with SCK: ");
+    Serial.print(BMS_SCK);
+    Serial.print(", MISO: ");
+    Serial.print(BMS_MISO);
+    Serial.print(", MOSI: ");
+    Serial.println(BMS_MOSI);
 
-  writeLTCConfig();
+    pinMode(BMS_CS, OUTPUT);
+    digitalWrite(BMS_CS, HIGH); //pull CS high to start
+    delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
+    
+    cvr[0]=0;
+    cfr[0]=0;
+    cfr[1]=2;
+    cmnd[0] = 0;
 
-  //start timer
-  t1 = millis();
+    writeLTCConfig();
 
-  Serial.println("LTC6802 Setup Complete");
-  return 1; // Return success code
+    //start timer
+    t1 = millis();
+
+    Serial.println("LTC6802 Setup Complete");
+    return 1; // Return success code
 }
 
 void writeLTCConfig() {
@@ -154,7 +168,7 @@ uint8_t* getCellVoltages() {
     return cellVolts;
 }
 
-void startLTC6802Conversion(const byte cmd)
+void startLTC6802Conversion(const uint8_t cmd)
 {
   // sends a single byte command to LTC6802 to start conversion
 
@@ -168,7 +182,7 @@ void startLTC6802Conversion(const byte cmd)
 
 }
 
-void readLTC6802(const byte cmd, const byte numOfRegisters, byte *const arr)
+void readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const arr)
 {
   // reads values from specified register into provided array. Will retry if communication error.
   Serial.print("Reading command: 0x");
@@ -252,11 +266,12 @@ void displayLTC6802Config()
 void updateLTC6802() {
 
   //write config register every 2 seconds TODO add contidion for pull up or down
-  if(millis() - t1 >= 2000){
-    writeLTCConfig();
-    Serial.println("Wrote CFR");
-    t1 = millis();
-  }
+//   if(millis() - t1 >= 2000){
+//     writeLTCConfig();
+//     Serial.println("Wrote CFR");
+//     t1 = millis();
+//   }
+  writeLTCConfig();
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading
