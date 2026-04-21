@@ -6,6 +6,7 @@
 #include "ESP32MQTTClient.h"
 #include "esp_idf_version.h" // check IDF version
 #include <observer.h>
+#include <config.h>
 //#include <cstdint>
 
 //consts
@@ -13,15 +14,15 @@
 namespace constants {
     // device constants
     //inline constexpr const char* CLIENT_NAME = "solarpv0123"; //name for mqtt client
-    inline constexpr const char* CLIENT_SUB = "test/topic"; //sub for mqtt clients
-    inline constexpr const char* CLIENT_PUB = "outTopic"; //pub for mqtt clients
+    static char* CLIENT_SUB = "test/topic"; //sub for mqtt clients
+    static char* CLIENT_PUB = "outTopic"; //pub for mqtt clients
 
     // mqtt broker constants
-    inline constexpr const char* C_MQTT_CLIENT_USER = "solarpv"; //username for mqtt clients
-    inline constexpr const char* C_MQTT_CLIENT_PASSWORD = "solarpv123"; //password for mqtt clients
+    static char* C_MQTT_CLIENT_USER = "solarpv"; //username for mqtt clients
+    static char* C_MQTT_CLIENT_PASSWORD = "solarpv123"; //password for mqtt clients
     //inline constexpr uint8_t C_MQTT_BROKER_ADDRESS[] = {10, 16, 204, 165}; //address of mqtt broker
-    inline constexpr const char* C_MQTT_BROKER_ADDRESS = "mqtt://10.16.204.165:1883"; // address of mqtt broker
-    inline constexpr short C_MQTT_PORT = 1883; //port for mqtt broker
+    static char* C_MQTT_BROKER_ADDRESS = "mqtt://10.16.204.165:1883"; // address of mqtt broker
+    static short C_MQTT_PORT = 1883; //port for mqtt broker
 }
 
 

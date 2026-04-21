@@ -6,11 +6,6 @@
 
 using namespace constants;
 
-static int BMS_MOSI = 23;
-static int BMS_MISO = 19;
-static int BMS_SCK = 18;
-static int BMS_CS = 5;
-
 // Define registers for SPI communication
 byte cmnd[2]; // command register
 byte tmp[7]; // temperature register

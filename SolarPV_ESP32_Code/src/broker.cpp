@@ -38,6 +38,12 @@ bool MyBroker::onEvent(sMQTTEvent *event)
 
 // Initialize the MQTT broker on the specified port.
 void BrokerManager::setupBroker(){
+    // Get MQTT configuration from ConfigManager singleton
+    ConfigManager& config = ConfigManager::getInstance();
+    MQTT_PORT = config.mqttConfig.port; // get port from config
+    MQTT_CLIENT_PASSWORD = config.mqttConfig.password; // get client password from config
+    MQTT_CLIENT_USER = config.mqttConfig.username; // get client username from config
+
     broker.init(MQTT_PORT);
     std::cout << "MQTT Broker initialized on port " << MQTT_PORT << std::endl;
 }

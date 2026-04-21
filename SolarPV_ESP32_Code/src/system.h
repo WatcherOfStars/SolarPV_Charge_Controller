@@ -2,46 +2,40 @@
 #define SYSTEM_H
 
 #include <Arduino.h>
-#include <observer.h>
+#include "observer.h"
 #include <RTClib.h>
+#include "config.h"
 
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
 namespace constants {
-    inline constexpr char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+    static char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+    // device contsants
+    static uint8_t NUM_CELLS = 6; // number of cells in the battery pack
+    static float MAX_CELL_VOLTAGE = 4.0; // maximum voltage for a single cell
+    static float MIN_CELL_VOLTAGE = 3.4; // minimum voltage for a single cell
+    static float SAFETY_CELL_VOLTAGE = 3.1; // voltage to trigger safety cutoff
+    static float CELL_VOLTAGE_HYSTERESIS = 0.1; // voltage
+    static float MAX_CELL_TEMPERATURE = 60.0; // maximum safe temperature for a cell in degrees Celsius
+    static float MIN_CELL_TEMPERATURE = -20.0; // minimum safe temperature for a cell in degrees Celsius
+    static float MAX_PACK_VOLTAGE = NUM_CELLS * MAX_CELL_VOLTAGE; // maximum voltage for the entire battery pack
+    static float MIN_PACK_VOLTAGE = NUM_CELLS * MIN_CELL_VOLTAGE; // minimum voltage for the entire battery pack
+    static float SHUNT_RESISTANCE = 0.00075; // shunt resistance in ohms for current measurement, must be > 0.002 for accurate readings
+    static float MAX_CURRENT = 20.0; // maximum current in amps for the system
+    static float FAN_ON_TEMPERATURE = 40.0; // temperature in degrees Celsius to turn the cooling fan on
+    static float FAN_OFF_TEMPERATURE = 35.0; // temperature in degrees Celsius to turn the cooling fan off
+    static float LOW_BATTERY_THRESHOLD = 20.0; // state of charge percentage to consider the battery low
+    static float HIGH_BATTERY_THRESHOLD = 80.0; // state of charge percentage to consider the battery high    
+    static float FULL_BATTERY_THRESHOLD = 95.0; // state of charge percentage to consider the battery full
+    static float LOW_BATTERY_DISCHARGE_THRESHOLD = 15.0; // state of charge percentage to cut power to loads
+    static float FAN_DUTY_CYCLE = 0.5; // duty cycle for cooling fan when on (0.0 to 1.0)
     
-    // device constants
-    inline constexpr uint8_t NUM_CELLS = 6; // number of cells in the battery pack
-    inline constexpr float MAX_CELL_VOLTAGE = 4.2; // maximum voltage for a single cell
-    inline constexpr float MIN_CELL_VOLTAGE = 3.0; // minimum voltage for a single cell
-    inline constexpr float MAX_CELL_TEMPERATURE = 60.0; // maximum safe temperature for a cell in degrees Celsius
-    inline constexpr float MIN_CELL_TEMPERATURE = -20.0; // minimum safe temperature for a cell in degrees Celsius
-    inline constexpr float MAX_PACK_VOLTAGE = NUM_CELLS * MAX_CELL_VOLTAGE; // maximum voltage for the entire battery pack
-    inline constexpr float MIN_PACK_VOLTAGE = NUM_CELLS * MIN_CELL_VOLTAGE; // minimum voltage for the entire battery pack
-    inline constexpr float SHUNT_RESISTANCE = 0.00075; // shunt resistance in ohms for current measurement, must be > 0.002 for accurate readings
-    inline constexpr float MAX_CURRENT = 20.0; // maximum current in amps for the system
-    inline constexpr float FAN_ON_TEMPERATURE = 40.0; // temperature in degrees Celsius to turn the cooling fan on
-    inline constexpr float FAN_OFF_TEMPERATURE = 35.0; // temperature in degrees Celsius to turn the cooling fan off
-    inline constexpr float LOW_BATTERY_THRESHOLD = 20.0; // state of charge percentage to consider the battery low
-    inline constexpr float HIGH_BATTERY_THRESHOLD = 80.0; // state of charge percentage to consider the battery high    
-    inline constexpr float FULL_BATTERY_THRESHOLD = 95.0; // state of charge percentage to consider the battery full
-    inline constexpr float LOW_BATTERY_DISCHARGE_THRESHOLD = 15.0; // state of charge percentage to cut power to loads
-    inline constexpr float FAN_DUTY_CYCLE = 0.5; // duty cycle for cooling fan when on (0.0 to 1.0)
-
-    // pins
-    inline constexpr uint8_t BMS_CLK_PIN = 18; // BMS clock pin
-    inline constexpr uint8_t BMS_MOSI_PIN = 23; // BMS MOSI pin
-    inline constexpr uint8_t BMS_MISO_PIN = 19; // BMS MISO pin
-    inline constexpr uint8_t BMS_CS_PIN = 5; // BMS chip select pin
-    inline constexpr uint16_t BMS_ADDRESS = 0x80; // BMS I2C address (placeholder, to be updated with actual address)
-
-    inline constexpr uint8_t WIRE_SCL_PIN = 22; // I2C clock pin
-    inline constexpr uint8_t WIRE_SDA_PIN = 21; // I2C data pin
-
-    inline constexpr uint8_t RESTART_PIN = 2; // pin to trigger relay system restart
-    inline constexpr uint8_t SOLAR_FET_PIN = 17; // pin to control solar FETs
-    inline constexpr uint8_t LOAD_FET_PIN = 16; // pin to control load FETs
-    inline constexpr uint8_t FAN_PIN = 4; // pin to control cooling fan
+    static uint8_t WIRE_SCL_PIN = 22; // I2C clock pin
+    static uint8_t WIRE_SDA_PIN = 21; // I2C data 
+    static uint8_t RESTART_PIN = 2; // pin to trigger relay system restart
+    static uint8_t SOLAR_FET_PIN = 17; // pin to control solar FETs
+    static uint8_t LOAD_FET_PIN = 16; // pin to control load FETs
+    static uint8_t FAN_PIN = 4; // pin to control cooling fan
 }
 
 struct Sys_Flags {
@@ -56,10 +50,15 @@ struct Sys_Flags {
 struct BMSData {
     float cellVoltages[6]; // Assuming a 6-cell battery pack
     float cellTemperatures[6]; // Temperature for each cell
-    //float stateOfCharge; // State of charge in percentage
-    //float stateOfHealth; // State of health in percentage
-    //bool isCharging; // Charging status
-    //bool isDischarging; // Discharging status
+    float maxCellVoltage; // Maximum cell voltage in the pack
+    float minCellVoltage; // Minimum cell voltage in the pack
+    int maxCellIndex; // Index of the cell with the maximum voltage
+    int minCellIndex; // Index of the cell with the minimum voltage
+    float averageCellVoltage; // Average cell voltage across the pack
+    //float stateOfCharge; // State of charge percentage for the battery pack
+    //float stateOfHealth; // State of health percentage for the battery pack
+    bool isCharging; // Whether the battery is currently charging
+    bool isDischarging; // Whether the battery is currently discharging
 };
 
 struct SystemData {

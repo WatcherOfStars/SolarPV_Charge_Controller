@@ -62,10 +62,12 @@ void ConfigManager::loadConfig(const char* filename) {
     deviceConfig.num_cells = doc["device_config"]["num_cells"];
     deviceConfig.max_cell_voltage = doc["device_config"]["max_cell_voltage"];
     deviceConfig.min_cell_voltage = doc["device_config"]["min_cell_voltage"];
+    deviceConfig.safety_cell_voltage = doc["device_config"]["safety_cell_voltage"];
+    deviceConfig.cell_voltage_hysteresis = doc["device_config"]["cell_voltage_hysteresis"];
     deviceConfig.max_cell_temperature = doc["device_config"]["max_cell_temperature"];
     deviceConfig.min_cell_temperature = doc["device_config"]["min_cell_temperature"];
-    deviceConfig.max_pack_voltage = doc["device_config"]["max_pack_voltage"];
-    deviceConfig.min_pack_voltage = doc["device_config"]["min_pack_voltage"];
+    deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells; // Assuming max pack voltage is just max cell voltage times number of cells, adjust as needed
+    deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells; // Assuming min pack voltage is just min cell voltage times number of cells, adjust as needed
 
     deviceConfig.shunt_resistance = doc["device_config"]["shunt_resistance"];
     deviceConfig.max_current = doc["device_config"]["max_current"];

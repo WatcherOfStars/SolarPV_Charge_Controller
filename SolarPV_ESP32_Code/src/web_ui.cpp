@@ -13,6 +13,14 @@ using namespace std;
 volatile bool updates = false;
 
 void WebUI::setupWebConn(){
+	//CALL THIS FIRST TO SETUP WIFI CONNECTION BEFORE SETTING UP THE UI
+	// load config
+	ConfigManager& config = ConfigManager::getInstance();
+	HOSTNAME = config.wifiConfig.hostname;
+	FORCE_USE_HOTSPOT = config.wifiConfig.force_use_hotspot;
+	WIFI_SSID = config.wifiConfig.ssid;
+	WIFI_PASSWORD = config.wifiConfig.password;
+
 	connectWifi();
 
 	// Display the IP address of the ESP32 (MIGHT BREAK)
@@ -103,9 +111,9 @@ void WebUI::setupWebUI(){
 	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, maintab, my_generalCallback);
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
-	// mainSlider = ESPUI.addControl(Slider, "Slider", "200", Wetasphalt, maintab, generalCallback);
-	// ESPUI.addControl(Min, "", "10", None, mainSlider);
-	// ESPUI.addControl(Max, "", "400", None, mainSlider);
+	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "200", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Min, "", "12", None, testVoltageSlider);
+	ESPUI.addControl(Max, "", "30", None, testVoltageSlider);
 
 	//These are the values for the selector's options. (Note that they *must* be declared static
 	//so that the storage is allocated in global memory and not just on the stack of this function.)
@@ -255,7 +263,7 @@ void WebUI::connectWifi() {
 		Serial.println("\nCreating access point...");
 		WiFi.mode(WIFI_AP);
 		WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-		WiFi.softAP(HOSTNAME);
+		WiFi.softAP(HOSTNAME + String(ConfigManager::getInstance().deviceConfig.device_id)); //append device ID to hotspot name to make it identifiable
 
 		connect_timeout = 20;
 		do {

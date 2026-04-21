@@ -7,13 +7,16 @@
 #include <broker.h>
 #include <vector>
 #include "observer.h"
+#include "config.h"
 
 
 //consts
 // namespace constants { inline constexpr double PI = 3.14; }
 namespace constants {
-    inline constexpr const char* HOSTNAME = "ESPUITest2";
-    inline constexpr int FORCE_USE_HOTSPOT = 0;
+    static char* HOSTNAME = "ESPUITest2";
+    static int FORCE_USE_HOTSPOT = 0;
+    static char* WIFI_SSID = "your_wifi_ssid"; //default wifi ssid, can be overridden by config
+    static char* WIFI_PASSWORD = "your_wifi_password"; //default wifi password, can be overridden by config
 }
 
 
@@ -51,7 +54,7 @@ private:
     //status labels
     uint16_t ina226_status_label, rtc_status_label, bms_status_label;
     //other
-    uint16_t test_message_text, mainTime;
+    uint16_t test_message_text, mainTime, testVoltageSlider;
 
     // prototypes
     void generalCallback(Control *sender, int type);

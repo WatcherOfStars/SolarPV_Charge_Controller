@@ -17,6 +17,15 @@ void MqttClientManager::setupClient(){ //Client &set_client
     // Set callback to notify observers instead of empty callback
     //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
+    // Get MQTT configuration from ConfigManager
+    MqttConfig mqttConfig = ConfigManager::getInstance().mqttConfig;
+    CLIENT_SUB = mqttConfig.command_topic; // set client subscription topic from config
+    CLIENT_PUB = mqttConfig.data_topic; // set client publication topic from config
+    C_MQTT_BROKER_ADDRESS = mqttConfig.broker; // set broker address from config
+    C_MQTT_CLIENT_USER = mqttConfig.username; // set client username from config
+    C_MQTT_CLIENT_PASSWORD = mqttConfig.password; // set client password from config
+    C_MQTT_PORT = mqttConfig.port; // set broker port from config
+
     mqttClient.enableDebuggingMessages();
     mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str()); // set client name to something unique using the MAC address
 
