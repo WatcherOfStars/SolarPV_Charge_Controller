@@ -6,6 +6,9 @@
 
 using namespace std;
 
+String username;
+String password;
+
 // Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
 bool MyBroker::onEvent(sMQTTEvent *event)
 {
@@ -15,7 +18,7 @@ bool MyBroker::onEvent(sMQTTEvent *event)
         {
             sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
             // Check username and password used for new connection
-            if ((e->Login() != ConfigManager::getInstance().mqttConfig.username) || (e->Password() != ConfigManager::getInstance().mqttConfig.password)) {
+            if ((e->Login() != username.c_str()) || (e->Password() != password.c_str())) {
                 Serial.println("Invalid username or password");  
                 return false;
                 }
@@ -38,6 +41,8 @@ bool MyBroker::onEvent(sMQTTEvent *event)
 // Initialize the MQTT broker on the specified port.
 void BrokerManager::setupBroker(){
     broker.init(ConfigManager::getInstance().mqttConfig.port);
+    username = ConfigManager::getInstance().mqttConfig.username;
+    password = ConfigManager::getInstance().mqttConfig.password;
     std::cout << "MQTT Broker initialized on port " << ConfigManager::getInstance().mqttConfig.port << std::endl;
 }
 

@@ -3,6 +3,7 @@
 #include <EEPROM.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+//#include <DNSServer.h>
 #include <iostream>
 #include <algorithm>
 #include <ArduinoJson.h>
@@ -12,6 +13,7 @@ using namespace std;
 volatile bool updates = false;
 
 WifiConfig wifiConfig;
+bool webUiReady = false;
 
 void WebUI::setupWebConn(){
 	//CALL THIS FIRST TO SETUP WIFI CONNECTION BEFORE SETTING UP THE UI
@@ -171,7 +173,8 @@ void WebUI::setupWebUI(){
 
 	//Finally, start up the UI. 
 	//This should only be called once we are connected to WiFi.
-	ESPUI.begin(wifiConfig.hostname);
+	ESPUI.begin(wifiConfig.hostname.c_str());
+	webUiReady = true;
 }
 
 
@@ -224,7 +227,7 @@ void WebUI::readStringFromEEPROM(String& buf, int baseaddress, int size) {
 
 void WebUI::connectWifi() {
 	int connect_timeout;
-	WiFi.setHostname(wifiConfig.hostname);
+	WiFi.setHostname(wifiConfig.hostname.c_str());
 	Serial.println("Begin wifi...");
 
 	//Load credentials from EEPROM 
@@ -251,17 +254,18 @@ void WebUI::connectWifi() {
 	}
 	
 	if (WiFi.status() == WL_CONNECTED) {
+
 		Serial.println(WiFi.localIP());
 		Serial.println("Wifi started");
 
-		if (!MDNS.begin(wifiConfig.hostname)) {
+		if (!MDNS.begin(wifiConfig.hostname.c_str())) {
 			Serial.println("Error setting up MDNS responder!");
 		}
 	} else {
 		Serial.println("\nCreating access point...");
 		WiFi.mode(WIFI_AP);
 		WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-		WiFi.softAP(wifiConfig.hostname + String(ConfigManager::getInstance().deviceConfig.device_id)); //append device ID to hotspot name to make it identifiable
+		WiFi.softAP(wifiConfig.hostname.c_str()); //append device ID to hotspot name to make it identifiable
 
 		connect_timeout = 20;
 		do {

@@ -43,7 +43,7 @@ private:
     //values
     uint16_t rtc_time_label, shunt_voltage_label, current_label, cell_voltages_label, cell_temperatures_label;
     //status labels
-    uint16_t ina226_status_label, rtc_status_label, bms_status_label;
+    uint16_t ina226_status_label, rtc_status_label, bms_status_label, dns_status_label;
     //other
     uint16_t test_message_text, mainTime, testVoltageSlider;
 

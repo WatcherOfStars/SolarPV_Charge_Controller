@@ -27,15 +27,15 @@ void mainEventHandler::onNotify(const char* topic, const char* message) {
 mainEventHandler eventHandler; // Create main event handler object
 
 void setup(){
+  // Start serial communication for debugging
+  Serial.begin(115200);
+	while(!Serial);
+
   // Load configuration from JSON file
   Serial.println("Loading configuration...");
   ConfigManager::getInstance().loadConfig("/config.json");
   ConfigManager::getInstance().printConfig();
-
-
-  // Start serial communication for debugging
-  Serial.begin(115200);
-	while(!Serial);
+  
 	if(ConfigManager::getInstance().deviceConfig.slow_boot) delay(5000); //Delay booting to give time to connect a serial monitor
 
 

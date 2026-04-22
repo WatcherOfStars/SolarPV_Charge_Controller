@@ -27,7 +27,7 @@ void MqttClientManager::setupClient(){ //Client &set_client
     std::cout << "Using password: " << mqttConfig.password << std::endl;
     std::cout << "Using client name: " << mqttClient.getClientName() << std::endl;
 
-    mqttClient.setURI(mqttConfig.broker, mqttConfig.username, mqttConfig.password); // set broker address and credentials
+    mqttClient.setURI(mqttConfig.broker.c_str(), mqttConfig.username.c_str(), mqttConfig.password.c_str()); // set broker address and credentials
     mqttClient.enableLastWillMessage("lwt", "I am going offline");
     mqttClient.setKeepAlive(30);
     // mqttClient.subscribe(CLIENT_SUB, [this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
@@ -61,7 +61,7 @@ void onMqttConnect(esp_mqtt_client_handle_t client)
     if (mqttClient.isMyTurn(client)) // can be omitted if only one client
     {
         std::cout << "MQTT client connected! Subscribed to topic: " << mqttConfig.command_topic << std::endl;
-        mqttClient.subscribe(mqttConfig.command_topic, [](const std::string &topic, const std::string &payload)
+        mqttClient.subscribe(mqttConfig.command_topic.c_str(), [](const std::string &topic, const std::string &payload)
                              { log_i("%s: %s", topic.c_str(), payload.c_str()); });
     }
 }
