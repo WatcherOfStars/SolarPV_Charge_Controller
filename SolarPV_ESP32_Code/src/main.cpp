@@ -81,14 +81,14 @@ void loop() {
 
 		sys.updateSystem();
 
-    Serial.print("Config BMS MOSI Pin: ");
-    Serial.println(ConfigManager::getInstance().deviceConfig.bms_mosi_pin);
-    Serial.print("Config BMS MISO Pin: ");
-    Serial.println(ConfigManager::getInstance().deviceConfig.bms_miso_pin);
-    Serial.print("Config BMS CLK Pin: ");
-    Serial.println(ConfigManager::getInstance().deviceConfig.bms_clk_pin);
-    Serial.print("Config BMS CS Pin: ");
-    Serial.println(ConfigManager::getInstance().deviceConfig.bms_cs_pin);
+    // Serial.print("Config BMS MOSI Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_mosi_pin);
+    // Serial.print("Config BMS MISO Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_miso_pin);
+    // Serial.print("Config BMS CLK Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_clk_pin);
+    // Serial.print("Config BMS CS Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_cs_pin);
 
 		lastTime = millis();
     //Serial.println("Sys Loop Done!");

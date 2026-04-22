@@ -9,37 +9,7 @@
 #include <config.h>
 //#include <cstdint>
 
-//consts
-// namespace constants { inline constexpr double PI = 3.14; }
-namespace constants {
-    // device constants
-    //inline constexpr const char* CLIENT_NAME = "solarpv0123"; //name for mqtt client
-    static char* CLIENT_SUB = "test/topic"; //sub for mqtt clients
-    static char* CLIENT_PUB = "outTopic"; //pub for mqtt clients
 
-    // mqtt broker constants
-    static char* C_MQTT_CLIENT_USER = "solarpv"; //username for mqtt clients
-    static char* C_MQTT_CLIENT_PASSWORD = "solarpv123"; //password for mqtt clients
-    //inline constexpr uint8_t C_MQTT_BROKER_ADDRESS[] = {10, 16, 204, 165}; //address of mqtt broker
-    static char* C_MQTT_BROKER_ADDRESS = "mqtt://10.16.204.165:1883"; // address of mqtt broker
-    static short C_MQTT_PORT = 1883; //port for mqtt broker
-}
-
-
-// //observer and subject class prototypes
-// class mqttClientObserver{ //todo: do we need aliases for topic and message types?
-// public:
-//     virtual void onNotify(char* topic, char* message) = 0; //function to notify observers of incoming messages. 
-//     virtual ~mqttClientObserver() = default; //destructor
-// };
-
-// class mqttClientSubject{
-// public:
-//     virtual void registerObserver(mqttClientObserver* obs) = 0;
-//     virtual void removeObserver(mqttClientObserver* obs) = 0;
-//     virtual void notifyObservers(char* topic, char* message) = 0;
-//     virtual ~mqttClientSubject() = default; //destructor
-// };
 
 //class prototype
 class MqttClientManager : public subject {

@@ -2,12 +2,8 @@
 #define LTC6802_H
 
 #include <Arduino.h>
-#include <config.h>
+#include "config.h"
 
-static int BMS_MOSI = 23;
-static int BMS_MISO = 19;
-static int BMS_SCK = 18;
-static int BMS_CS = 5;
 
 int setupLTC6802();
 void updateLTC6802();

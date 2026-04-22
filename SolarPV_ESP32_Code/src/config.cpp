@@ -15,9 +15,11 @@ void ConfigManager::loadConfig(const char* filename) {
     }
     File configFile = LittleFS.open(filename, "r");
     if (!configFile) {
-        Serial.println("Failed to open config file");
+        Serial.println("ERROR: Failed to open config file");
+        LittleFS.end();
         return;
     }
+    
     while (configFile.available()) {
         Serial.print((char)configFile.read());
     }
@@ -25,18 +27,17 @@ void ConfigManager::loadConfig(const char* filename) {
     size_t size = configFile.size();
     Serial.print("Config file size: ");
     Serial.println(size);
-    // if (size > 1024) {
-    //     Serial.println("Config file size is too large");
-    //     return;
-    // }
+    
     std::unique_ptr<char[]> buf(new char[size]);
     configFile.readBytes(buf.get(), size);
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, buf.get());
     configFile.close();
+    
     if (error) {
-        Serial.print("Failed to parse config file: ");
+        Serial.print("ERROR: Failed to parse config file: ");
         Serial.println(error.c_str());
+        LittleFS.end();
         return;
     }
     LittleFS.end();
@@ -66,8 +67,17 @@ void ConfigManager::loadConfig(const char* filename) {
     deviceConfig.cell_voltage_hysteresis = doc["device_config"]["cell_voltage_hysteresis"];
     deviceConfig.max_cell_temperature = doc["device_config"]["max_cell_temperature"];
     deviceConfig.min_cell_temperature = doc["device_config"]["min_cell_temperature"];
-    deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells; // Assuming max pack voltage is just max cell voltage times number of cells, adjust as needed
-    deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells; // Assuming min pack voltage is just min cell voltage times number of cells, adjust as needed
+    
+    // Prevent division by zero if num_cells is not properly loaded
+    if (deviceConfig.num_cells > 0) {
+        deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells;
+        deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells;
+    } else {
+        Serial.println("ERROR: num_cells is still 0 after loading config!");
+        deviceConfig.num_cells = 6; // Fallback to default
+        deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells;
+        deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells;
+    }
 
     deviceConfig.shunt_resistance = doc["device_config"]["shunt_resistance"];
     deviceConfig.max_current = doc["device_config"]["max_current"];

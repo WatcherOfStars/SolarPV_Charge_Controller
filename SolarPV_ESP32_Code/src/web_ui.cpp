@@ -7,24 +7,22 @@
 #include <algorithm>
 #include <ArduinoJson.h>
 
-using namespace constants;
 using namespace std;
 
 volatile bool updates = false;
 
+WifiConfig wifiConfig;
+
 void WebUI::setupWebConn(){
 	//CALL THIS FIRST TO SETUP WIFI CONNECTION BEFORE SETTING UP THE UI
-	// load config
-	ConfigManager& config = ConfigManager::getInstance();
-	HOSTNAME = config.wifiConfig.hostname;
-	FORCE_USE_HOTSPOT = config.wifiConfig.force_use_hotspot;
-	WIFI_SSID = config.wifiConfig.ssid;
-	WIFI_PASSWORD = config.wifiConfig.password;
+	wifiConfig = ConfigManager::getInstance().wifiConfig;
 
 	connectWifi();
 
 	// Display the IP address of the ESP32 (MIGHT BREAK)
 	IPAddress IP = WiFi.softAPIP();
+	Serial.print("AP SSID: ");
+	Serial.println(WiFi.softAPNetworkID());
 	Serial.print("AP IP address: ");
 	Serial.println(IP);
 
@@ -173,7 +171,7 @@ void WebUI::setupWebUI(){
 
 	//Finally, start up the UI. 
 	//This should only be called once we are connected to WiFi.
-	ESPUI.begin(HOSTNAME);
+	ESPUI.begin(wifiConfig.hostname);
 }
 
 
@@ -226,11 +224,11 @@ void WebUI::readStringFromEEPROM(String& buf, int baseaddress, int size) {
 
 void WebUI::connectWifi() {
 	int connect_timeout;
-	WiFi.setHostname(HOSTNAME);
+	WiFi.setHostname(wifiConfig.hostname);
 	Serial.println("Begin wifi...");
 
 	//Load credentials from EEPROM 
-	if(!(FORCE_USE_HOTSPOT)) {
+	if(!(wifiConfig.force_use_hotspot)) {
 		yield();
 		EEPROM.begin(100);
 		String stored_ssid, stored_pass;
@@ -256,14 +254,14 @@ void WebUI::connectWifi() {
 		Serial.println(WiFi.localIP());
 		Serial.println("Wifi started");
 
-		if (!MDNS.begin(HOSTNAME)) {
+		if (!MDNS.begin(wifiConfig.hostname)) {
 			Serial.println("Error setting up MDNS responder!");
 		}
 	} else {
 		Serial.println("\nCreating access point...");
 		WiFi.mode(WIFI_AP);
 		WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-		WiFi.softAP(HOSTNAME + String(ConfigManager::getInstance().deviceConfig.device_id)); //append device ID to hotspot name to make it identifiable
+		WiFi.softAP(wifiConfig.hostname + String(ConfigManager::getInstance().deviceConfig.device_id)); //append device ID to hotspot name to make it identifiable
 
 		connect_timeout = 20;
 		do {

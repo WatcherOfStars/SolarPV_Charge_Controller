@@ -10,15 +10,6 @@
 #include "config.h"
 
 
-//consts
-// namespace constants { inline constexpr double PI = 3.14; }
-namespace constants {
-    static char* HOSTNAME = "ESPUITest2";
-    static int FORCE_USE_HOTSPOT = 0;
-    static char* WIFI_SSID = "your_wifi_ssid"; //default wifi ssid, can be overridden by config
-    static char* WIFI_PASSWORD = "your_wifi_password"; //default wifi password, can be overridden by config
-}
-
 
 //class prototype
 class WebUI : public subject, public observer {

@@ -24,39 +24,33 @@ float t1 = 0;
 
 static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3);
 
+DeviceConfig device;
+
+static int BMS_CS = device.bms_cs_pin; // chip select pin for LTC6802, set in config
+
 
 int setupLTC6802() {
-    //get config values from config manager
-    BMS_CS = ConfigManager::getInstance().deviceConfig.bms_cs_pin;
-    BMS_MOSI = ConfigManager::getInstance().deviceConfig.bms_mosi_pin;
-    BMS_MISO = ConfigManager::getInstance().deviceConfig.bms_miso_pin;
-    BMS_SCK = ConfigManager::getInstance().deviceConfig.bms_clk_pin;
+  device = ConfigManager::getInstance().deviceConfig;
 
-    //start SPI
-    SPI.begin(BMS_SCK, BMS_MISO, BMS_MOSI);
-    Serial.print("Initialized SPI with SCK: ");
-    Serial.print(BMS_SCK);
-    Serial.print(", MISO: ");
-    Serial.print(BMS_MISO);
-    Serial.print(", MOSI: ");
-    Serial.println(BMS_MOSI);
+  //start SPI
+  SPI.begin(device.bms_clk_pin, device.bms_miso_pin, device.bms_mosi_pin);
 
-    pinMode(BMS_CS, OUTPUT);
-    digitalWrite(BMS_CS, HIGH); //pull CS high to start
-    delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
-    
-    cvr[0]=0;
-    cfr[0]=0;
-    cfr[1]=2;
-    cmnd[0] = 0;
+  pinMode(BMS_CS, OUTPUT);
+  digitalWrite(BMS_CS, HIGH); //pull CS high to start
+  delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
+  
+  cvr[0]=0;
+  cfr[0]=0;
+  cfr[1]=2;
+  cmnd[0] = 0;
 
-    writeLTCConfig();
+  writeLTCConfig();
 
-    //start timer
-    t1 = millis();
+  //start timer
+  t1 = millis();
 
-    Serial.println("LTC6802 Setup Complete");
-    return 1; // Return success code
+  Serial.println("LTC6802 Setup Complete");
+  return 1; // Return success code
 }
 
 void writeLTCConfig() {

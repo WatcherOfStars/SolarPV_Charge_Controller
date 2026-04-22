@@ -5,14 +5,6 @@
 #include <sMQTTBroker.h>
 #include "config.h"
 
-//consts
-// namespace constants { inline constexpr double PI = 3.14; }
-namespace constants {
-    static char* MQTT_CLIENT_USER = "solarpv"; //username for mqtt clients
-    static char* MQTT_CLIENT_PASSWORD = "solarpv123"; //password for mqtt clients
-    static short MQTT_PORT = 1883; //port for mqtt broker
-}
-
 // // This class extends sMQTTBroker to implement custom event handling and should not be called outside the broker.
 class MyBroker : public sMQTTBroker{
 public:

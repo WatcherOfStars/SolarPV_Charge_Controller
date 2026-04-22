@@ -12,7 +12,7 @@ using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 1, 
+    ENABLE_BMS: 0, 
     ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
@@ -47,51 +47,26 @@ RTC_DS3231 rtc; // create clock object
 
 float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
 
+DeviceConfig deviceConfig;
+
 
 void SystemManager::setupSystem() {
     // get consts from config
-    ConfigManager& config = ConfigManager::getInstance();
-    
-    // device contsants
-    NUM_CELLS = config.deviceConfig.num_cells; // number of cells in the battery pack
-    MAX_CELL_VOLTAGE = config.deviceConfig.max_cell_voltage; // maximum voltage for a single cell
-    MIN_CELL_VOLTAGE = config.deviceConfig.min_cell_voltage; // minimum voltage for a single cell
-    SAFETY_CELL_VOLTAGE = config.deviceConfig.safety_cell_voltage; // voltage to trigger safety cutoff
-    CELL_VOLTAGE_HYSTERESIS = config.deviceConfig.cell_voltage_hysteresis;
-    MAX_CELL_TEMPERATURE = config.deviceConfig.max_cell_temperature; // maximum safe temperature for a cell in degrees Celsius
-    MIN_CELL_TEMPERATURE = config.deviceConfig.min_cell_temperature; // minimum safe temperature for a cell in degrees Celsius
-    MAX_PACK_VOLTAGE = NUM_CELLS * MAX_CELL_VOLTAGE; // maximum voltage for the entire battery pack
-    MIN_PACK_VOLTAGE = NUM_CELLS * MIN_CELL_VOLTAGE; // minimum voltage for the entire battery pack
-    SHUNT_RESISTANCE = config.deviceConfig.shunt_resistance; // shunt resistance in ohms for current measurement, must be > 0.002 for accurate readings
-    MAX_CURRENT = config.deviceConfig.max_current; // maximum current in amps for the system
-    FAN_ON_TEMPERATURE = config.deviceConfig.fan_on_temperature; // temperature in degrees Celsius to turn the cooling fan on
-    FAN_OFF_TEMPERATURE = config.deviceConfig.fan_off_temperature; // temperature in degrees Celsius to turn the cooling fan off
-    LOW_BATTERY_THRESHOLD = config.deviceConfig.low_battery_threshold; // state of charge percentage to consider the battery low
-    HIGH_BATTERY_THRESHOLD = config.deviceConfig.high_battery_threshold; // state of charge percentage to consider the battery high    
-    FULL_BATTERY_THRESHOLD = config.deviceConfig.full_battery_threshold; // state of charge percentage to consider the battery full
-    LOW_BATTERY_DISCHARGE_THRESHOLD = config.deviceConfig.low_battery_discharge_threshold; // state of charge percentage to cut power to loads
-    FAN_DUTY_CYCLE = config.deviceConfig.fan_duty_cycle; // duty cycle for cooling fan when on (0.0 to 1.0)
-
-    WIRE_SCL_PIN = config.deviceConfig.wire_scl_pin; // I2C clock pin
-    WIRE_SDA_PIN = config.deviceConfig.wire_sda_pin; // I2C data 
-    RESTART_PIN = config.deviceConfig.restart_pin; // pin to trigger relay system restart
-    SOLAR_FET_PIN = config.deviceConfig.solar_fet_pin; // pin to control solar FETs
-    LOAD_FET_PIN = config.deviceConfig.load_fet_pin; // pin to control load FETs
-    FAN_PIN = config.deviceConfig.fan_pin; // pin to control cooling fan
+    deviceConfig = ConfigManager::getInstance().deviceConfig;
 
     // Initialize I2C
     Wire.begin(); 
 
     // Setup pins
-    pinMode(RESTART_PIN, OUTPUT);
-    pinMode(SOLAR_FET_PIN, OUTPUT);
-    pinMode(LOAD_FET_PIN, OUTPUT);
-    pinMode(FAN_PIN, OUTPUT);
+    pinMode(deviceConfig.restart_pin, OUTPUT);
+    pinMode(deviceConfig.solar_fet_pin, OUTPUT);
+    pinMode(deviceConfig.load_fet_pin, OUTPUT);
+    pinMode(deviceConfig.fan_pin, OUTPUT);
 
     ledcSetup(0, 5000, 8); // Setup PWM for fan control (channel 0, 5 kHz frequency, 8-bit resolution)
-    ledcAttachPin(FAN_PIN, 0); // Attach the fan control pin to the PWM channel
+    ledcAttachPin(deviceConfig.fan_pin, 0); // Attach the fan control pin to the PWM channel
 
-    digitalWrite(RESTART_PIN, HIGH); // write high to prevent shutdown until a restart is triggered
+    digitalWrite(deviceConfig.restart_pin, HIGH); // write high to prevent shutdown until a restart is triggered
 
     
     // Setup (-1 error, 0 not attempted, 1 success)
@@ -149,7 +124,7 @@ int SystemManager::setupINA226() {
     }
 
     // Configure the INA226 (e.g., calibration, averaging)
-    ina.setMaxCurrentShunt(MAX_CURRENT, SHUNT_RESISTANCE);
+    ina.setMaxCurrentShunt(deviceConfig.max_current, deviceConfig.shunt_resistance);
     ina.setAverage(4); // Set averaging to 4 samples
     return 1; // Return success code
 }
@@ -192,7 +167,49 @@ void SystemManager::updateSystem() {
 
     // get data from BMS
     if(bmsStatus == 1) {
+        
+        // Safety check: ensure num_cells is configured
+        if (deviceConfig.num_cells == 0) {
+            Serial.println("ERROR: num_cells not configured! Config may not have loaded properly.");
+            return;
+        }
+
         getBMSData();
+        // calculate min/max cell voltages and indexes
+        systemData.bmsData.minCellVoltage = *min_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + deviceConfig.num_cells);
+        systemData.bmsData.maxCellVoltage = *max_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + deviceConfig.num_cells);
+        systemData.bmsData.minCellIndex = distance(systemData.bmsData.cellVoltages, min_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + deviceConfig.num_cells));
+        systemData.bmsData.maxCellIndex = distance(systemData.bmsData.cellVoltages, max_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + deviceConfig.num_cells));
+
+        // calculate pack average and total voltage
+        uint16_t totalVoltage = 0;
+        for (int i = 0; i < deviceConfig.num_cells; ++i) {
+            totalVoltage += systemData.bmsData.cellVoltages[i];
+        }
+        systemData.bmsData.averageCellVoltage = totalVoltage / deviceConfig.num_cells;
+        
+        //##### POWER MANAGEMENT #####
+        Serial.println("Managing Power...");
+        // if batteries full, cut power from panels
+        if(systemData.bmsData.maxCellVoltage > deviceConfig.max_cell_voltage && systemData.bmsData.isCharging) {
+            Serial.println("Battery full, cutting power from panels. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
+            solarFETControl(false); // cut power from panels
+        } 
+        // if batteries below threshold, enable charging from panels
+        else if(systemData.bmsData.maxCellVoltage < deviceConfig.max_cell_voltage - deviceConfig.cell_voltage_hysteresis && !systemData.bmsData.isCharging) {
+            Serial.println("Battery low, enabling power from panels. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
+            solarFETControl(true); // enable power from panels
+        }
+        // if batteries low, cut power to loads
+        else if(systemData.bmsData.minCellVoltage < deviceConfig.min_cell_voltage && systemData.bmsData.isDischarging) {
+            Serial.println("Battery critically low, cutting power to loads. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
+            loadFETControl(false); // cut power to loads
+        }
+        // if batteries above threshold, enable power to loads
+        else if(systemData.bmsData.minCellVoltage > deviceConfig.min_cell_voltage + deviceConfig.cell_voltage_hysteresis && !systemData.bmsData.isDischarging) {
+            Serial.println("Battery above threshold, enabling power to loads. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
+            loadFETControl(true); // enable power to loads
+        }
     }
 
     //##### UPDATE ARRAYS AND CALCULATIONS ##### (may want to move some to initialization)
@@ -200,18 +217,7 @@ void SystemManager::updateSystem() {
     // update arrays
     // update vars
 
-    // calculate min/max cell voltages and indexes
-    systemData.bmsData.minCellVoltage = *min_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + NUM_CELLS);
-    systemData.bmsData.maxCellVoltage = *max_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + NUM_CELLS);
-    systemData.bmsData.minCellIndex = distance(systemData.bmsData.cellVoltages, min_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + NUM_CELLS));
-    systemData.bmsData.maxCellIndex = distance(systemData.bmsData.cellVoltages, max_element(systemData.bmsData.cellVoltages, systemData.bmsData.cellVoltages + NUM_CELLS));
 
-    // calculate pack average and total voltage
-    uint16_t totalVoltage = 0;
-    for (int i = 0; i < NUM_CELLS; ++i) {
-        totalVoltage += systemData.bmsData.cellVoltages[i];
-    }
-    systemData.bmsData.averageCellVoltage = totalVoltage / NUM_CELLS;
 
     // calculate pack temerature
     // calculate ambient temperature
@@ -224,28 +230,7 @@ void SystemManager::updateSystem() {
     // Serial.println("SPI Writing...");
     // SPI write every 10 seconds
 
-    //##### POWER MANAGEMENT #####
-    Serial.println("Managing Power...");
-    // if batteries full, cut power from panels
-    if(systemData.bmsData.maxCellVoltage > MAX_CELL_VOLTAGE && systemData.bmsData.isCharging) {
-        Serial.println("Battery full, cutting power from panels. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
-        solarFETControl(false); // cut power from panels
-    } 
-    // if batteries below threshold, enable charging from panels
-    else if(systemData.bmsData.maxCellVoltage < MAX_CELL_VOLTAGE - CELL_VOLTAGE_HYSTERESIS && !systemData.bmsData.isCharging) {
-        Serial.println("Battery low, enabling power from panels. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
-        solarFETControl(true); // enable power from panels
-    }
-    // if batteries low, cut power to loads
-    else if(systemData.bmsData.minCellVoltage < MIN_CELL_VOLTAGE && systemData.bmsData.isDischarging) {
-        Serial.println("Battery critically low, cutting power to loads. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
-        loadFETControl(false); // cut power to loads
-    }
-    // if batteries above threshold, enable power to loads
-    else if(systemData.bmsData.minCellVoltage > MIN_CELL_VOLTAGE + CELL_VOLTAGE_HYSTERESIS && !systemData.bmsData.isDischarging) {
-        Serial.println("Battery above threshold, enabling power to loads. Average cell voltage: " + String(systemData.bmsData.averageCellVoltage) + " V");
-        loadFETControl(true); // enable power to loads
-    }
+    
 
     // turn fan on or off based on temperature readings and current
 
@@ -377,15 +362,15 @@ void SystemManager::getBMSData(){
 
 int SystemManager::performSafetyChecks(){
     // Check overcurrent
-    if(systemData.shuntCurrent > MAX_CURRENT) {
+    if(systemData.shuntCurrent > deviceConfig.max_current && ina226Status == 1) {
         Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.shuntCurrent) + " mA");
         loadFETControl(false); // cut power to loads
     }
 
     // Check if battery voltages are within safe limits
-    if(systemData.bmsData.minCellVoltage < SAFETY_CELL_VOLTAGE) {
+    if(systemData.bmsData.minCellVoltage < deviceConfig.safety_cell_voltage && bmsStatus == 1) {
         Serial.println("Cell below safety voltage, shutting down " + String(systemData.bmsData.minCellIndex) + "! Cell voltage: " + String(systemData.bmsData.minCellVoltage) + " V. Shutting off loads.");
-        digitalWrite(RESTART_PIN, LOW); // restart pin to shut down the system
+        digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
         delay(1000);
     }
 
@@ -396,19 +381,19 @@ int SystemManager::performSafetyChecks(){
 
 void SystemManager::solarFETControl(bool state){
     if(sys_flags.ENABLE_SOLAR_FETs == 0) state=false; // Turn off if solar FET control is disabled by flags
-    digitalWrite(SOLAR_FET_PIN, state ? HIGH : LOW);
+    digitalWrite(deviceConfig.solar_fet_pin, state ? HIGH : LOW);
     systemData.bmsData.isCharging = state; // update charging status based on solar FET state
 }
 
 void SystemManager::loadFETControl(bool state){
     if(sys_flags.ENABLE_LOAD_FETs == 0) state=false; // Turn off if load FET control is disabled by flags
-    digitalWrite(LOAD_FET_PIN, state ? HIGH : LOW);
+    digitalWrite(deviceConfig.load_fet_pin, state ? HIGH : LOW);
     systemData.bmsData.isDischarging = state; // update discharging status based on load FET state
 }
 
 void SystemManager::fanControl(bool state){
     if(sys_flags.ENABLE_FAN == 0) state=false; // Turn off if fan control is disabled by flags
-    ledcWrite(0, state ? (FAN_DUTY_CYCLE * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
+    ledcWrite(0, state ? (deviceConfig.fan_duty_cycle * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
 }
 
 void SystemManager::onNotify(const char* topic, const char* message) {
@@ -419,7 +404,7 @@ void SystemManager::onNotify(const char* topic, const char* message) {
     if (strcmp(topic, "Restart_System") == 0) {
         std::cout << "Handling System_Reboot with message: " << message << std::endl;
         Serial.println("Rebooting system...");
-        digitalWrite(RESTART_PIN, LOW); // restart pin to shut down the system
+        digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
         delay(1000);
     }
 
@@ -522,12 +507,12 @@ void SystemManager::sendUpdatesToWebUI(){
 
     // Build JSON for data using ArduinoJson
     JsonDocument dataDoc;
-    dataDoc["Toggle_Solar_FETs"] = digitalRead(SOLAR_FET_PIN);
-    dataDoc["Toggle_Load_FETs"] = digitalRead(LOAD_FET_PIN);
+    dataDoc["Toggle_Solar_FETs"] = digitalRead(deviceConfig.solar_fet_pin);
+    dataDoc["Toggle_Load_FETs"] = digitalRead(deviceConfig.load_fet_pin);
 
     auto fanStatus = []() -> int {
         int pwmValue = ledcRead(0); // Read the current PWM value for the fan on channel 0
-        if (pwmValue > FAN_DUTY_CYCLE * 255 * 0.5) return 1; // Fan is on
+        if (pwmValue > deviceConfig.fan_duty_cycle * 255 * 0.5) return 1; // Fan is on
         else return 0; // Fan is off
     };
     dataDoc["Toggle_Fan"] = fanStatus();

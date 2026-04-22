@@ -5,25 +5,25 @@
 #include <ArduinoJson.h>
 
 struct WifiConfig {
-    char* hostname;
+    const char* hostname;
     bool force_use_hotspot;
-    char* ssid;
-    char* password;
+    const char* ssid;
+    const char* password;
 };
 
 struct MqttConfig {
-    char* broker;
+    const char* broker;
     uint16_t port;
-    char* username;
-    char* password;
-    char* data_topic;
-    char* command_topic;
-    char* status_topic;
-    char* client_id;
+    const char* username;
+    const char* password;
+    const char* data_topic;
+    const char* command_topic;
+    const char* status_topic;
+    const char* client_id;
 };
 
 struct DeviceConfig {
-    char* device_id;
+    const char* device_id;
     bool slow_boot;
     int num_cells;
     float max_cell_voltage;
@@ -47,7 +47,7 @@ struct DeviceConfig {
     int bms_mosi_pin;
     int bms_miso_pin;
     int bms_cs_pin;
-    char* bms_address;
+    const char* bms_address;
     int wire_scl_pin;
     int wire_sda_pin;
     int restart_pin;
@@ -55,6 +55,7 @@ struct DeviceConfig {
     int load_fet_pin;
     int fan_pin;
 };
+
 
 class ConfigManager {
 public:
