@@ -6,7 +6,7 @@
 
 
 int setupLTC6802();
-void updateLTC6802();
+int updateLTC6802();
 void writeLTCConfig();
 void printCellVoltages();
 void displayLTC6802Config();

@@ -82,7 +82,8 @@ void WebUI::setupWebUI(){
 	ESPUI.addControl(Separator, "System Flags", "", None, maintab);
 	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, maintab, my_updateObserversCallback);
 	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_ina226_switcher = ESPUI.addControl(Switcher, "Enable_INA226", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
+	enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
+	enable_load_ina_switcher = ESPUI.addControl(Switcher, "Enable_Load_INA", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
 	enable_solar_switcher = ESPUI.addControl(Switcher, "Enable_Solar_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
 	enable_load_switcher = ESPUI.addControl(Switcher, "Enable_Load_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);	
 	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
@@ -92,28 +93,30 @@ void WebUI::setupWebUI(){
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_BMS", None, enable_bms_switcher), switcherLabelStyle);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_RTC", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_INA226", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load", None, enable_bms_switcher), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar_INA", None, enable_bms_switcher), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load_INA", None, enable_bms_switcher), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar_FETs", None, enable_bms_switcher), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load_FETs", None, enable_bms_switcher), switcherLabelStyle);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Fan", None, enable_bms_switcher), switcherLabelStyle);
 
 	// display values
 	ESPUI.addControl(Separator, "System Data", "", None, maintab);
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, maintab, my_generalCallback);
-	shunt_voltage_label = ESPUI.addControl(Label, "Shunt_Voltage", "", Wetasphalt, maintab, my_generalCallback);
-	current_label = ESPUI.addControl(Label, "Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
+	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
+	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
 	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, maintab, my_generalCallback);
 	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, maintab, my_generalCallback);
 
 	ESPUI.addControl(Separator, "Component Status", "", None, maintab);
-	ina226_status_label = ESPUI.addControl(Label, "INA226_Status", "", Wetasphalt, maintab, my_generalCallback);
+	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "", Wetasphalt, maintab, my_generalCallback);
+	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "", Wetasphalt, maintab, my_generalCallback);
 	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, maintab, my_generalCallback);
 	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, maintab, my_generalCallback);
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
-	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "200", Wetasphalt, maintab, my_updateObserversCallback);
-	ESPUI.addControl(Min, "", "12", None, testVoltageSlider);
-	ESPUI.addControl(Max, "", "30", None, testVoltageSlider);
+	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "3.9", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Min, "", "0", None, testVoltageSlider);
+	ESPUI.addControl(Max, "", "5", None, testVoltageSlider);
 
 	//These are the values for the selector's options. (Note that they *must* be declared static
 	//so that the storage is allocated in global memory and not just on the stack of this function.)
@@ -356,14 +359,14 @@ void WebUI::onNotify(const char* topic, const char* message) {
 
 		//update labels based on message
 		//debut print to verify message parsing
-		Serial.print("WebUI recieved Shunt_Voltage: ");
-		Serial.println(doc["Shunt_Voltage"].as<const char*>());
-		Serial.print("WebUI recieved Shunt_Current: ");
-		Serial.println(doc["Shunt_Current"].as<const char*>());
+		// Serial.print("WebUI recieved Shunt_Voltage: ");
+		// Serial.println(doc["Shunt_Voltage"].as<const char*>());
+		// Serial.print("WebUI recieved Shunt_Current: ");
+		// Serial.println(doc["Shunt_Current"].as<const char*>());
 
 		if (!doc["RTC_Time"].isNull()) ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
-		if (!doc["Shunt_Voltage"].isNull()) ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
-		if (!doc["Shunt_Current"].isNull()) ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
+		if (!doc["Solar_Shunt_Current"].isNull()) ESPUI.updateLabel(solar_current_label, doc["Solar_Shunt_Current"]);
+		if (!doc["Load_Shunt_Current"].isNull()) ESPUI.updateLabel(load_current_label, doc["Load_Shunt_Current"]);
 		String cellVoltagesText;
 		String cellTemperaturesText;
 		if (doc["Cell_Voltages"].is<JsonArray>() || doc["Cell_Voltages"].is<JsonVariantConst>()) {
@@ -374,7 +377,8 @@ void WebUI::onNotify(const char* topic, const char* message) {
 			serializeJson(doc["Cell_Temperatures"], cellTemperaturesText);
 			ESPUI.updateLabel(cell_temperatures_label, cellTemperaturesText);
 		}
-		if (!doc["INA226_Status"].isNull()) ESPUI.updateLabel(ina226_status_label, doc["INA226_Status"]);
+		if (!doc["Solar_Shunt_Status"].isNull()) ESPUI.updateLabel(solar_shunt_status_label, doc["Solar_Shunt_Status"]);
+		if (!doc["Load_Shunt_Status"].isNull()) ESPUI.updateLabel(load_shunt_status_label, doc["Load_Shunt_Status"]);
 		if (!doc["RTC_Status"].isNull()) ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
 		if (!doc["BMS_Status"].isNull()) ESPUI.updateLabel(bms_status_label, doc["BMS_Status"]);
 	}
@@ -399,7 +403,8 @@ void WebUI::onNotify(const char* topic, const char* message) {
 		//update flags based on message
 		if (!doc["Enable_BMS"].isNull()) ESPUI.updateSwitcher(enable_bms_switcher, doc["Enable_BMS"]);
 		if (!doc["Enable_RTC"].isNull()) ESPUI.updateSwitcher(enable_rtc_switcher, doc["Enable_RTC"]);
-		if (!doc["Enable_INA226"].isNull()) ESPUI.updateSwitcher(enable_ina226_switcher, doc["Enable_INA226"]);
+		if (!doc["Enable_Solar_INA"].isNull()) ESPUI.updateSwitcher(enable_solar_ina_switcher, doc["Enable_Solar_INA"]);
+		if (!doc["Enable_Load_INA"].isNull()) ESPUI.updateSwitcher(enable_load_ina_switcher, doc["Enable_Load_INA"]);
 		if (!doc["Enable_Solar_FETs"].isNull()) ESPUI.updateSwitcher(enable_solar_switcher, doc["Enable_Solar_FETs"]);
 		if (!doc["Enable_Load_FETs"].isNull()) ESPUI.updateSwitcher(enable_load_switcher, doc["Enable_Load_FETs"]);
 		if (!doc["Enable_Fan"].isNull()) ESPUI.updateSwitcher(enable_fan_switcher, doc["Enable_Fan"]);

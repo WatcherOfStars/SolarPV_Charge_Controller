@@ -46,10 +46,21 @@ int setupLTC6802() {
 
   writeLTCConfig();
 
-  //start timer
-  t1 = millis();
+  //return fail code (-1) if config readback doesn't match what was written
+  readLTC6802(0x02, 6, tmp); // read config registers into tmp buffer
+  for (int i=1; i<6; i++){ // exclude index 0
+    if (tmp[i] != writecfr[i]){
+      Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
+      Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
+      Serial.print(", got ");      Serial.println(tmp[i], HEX);
+      return -1;
+    }
+  }
 
-  Serial.println("LTC6802 Setup Complete");
+  //start timer
+  //t1 = millis();
+
+  Serial.println("LTC6802 Setup Successful");
   return 1; // Return success code
 }
 
@@ -252,7 +263,12 @@ void displayLTC6802Config()
 }
 
 
-void updateLTC6802() {
+int updateLTC6802() {
+  // Safety check: ensure num_cells is configured
+  if (device.num_cells == 0) {
+      Serial.println("ERROR: num_cells not configured! Config may not have loaded properly.");
+      return -1;
+  }
 
   //write config register every 2 seconds TODO add contidion for pull up or down
 //   if(millis() - t1 >= 2000){
@@ -275,7 +291,14 @@ void updateLTC6802() {
 
   //config register reading
   readLTC6802(0x02, 6, cfr); //read config registers
-
+  for (int i=1; i<6; i++){ // exclude index 0
+    if (tmp[i] != writecfr[i]){
+      Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
+      Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
+      Serial.print(", got ");      Serial.println(tmp[i], HEX);
+      return -1;
+    }
+  }
 
   //print results
   Serial.print("Cell Voltages: ");
@@ -296,5 +319,5 @@ void updateLTC6802() {
   Serial.println();
   //printDecodedConfigView();
   Serial.println("-----");
-
+  return 1; // Return success code
 }

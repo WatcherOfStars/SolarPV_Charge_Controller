@@ -13,10 +13,12 @@ struct Sys_Flags {
     unsigned int ENABLE_SOLAR_FETs : 1;
     unsigned int ENABLE_LOAD_FETs : 1;
     unsigned int ENABLE_FAN : 1;
-    unsigned int ENABLE_INA226 : 1;
+    unsigned int ENABLE_SOLAR_INA : 1;
+    unsigned int ENABLE_LOAD_INA : 1;
+    unsigned int ENABLE_FAKE_BATTERY : 1; // for testing without BMS, will generate fake battery data
 };
 
-struct BMSData {
+struct BattData {
     float cellVoltages[6]; // Assuming a 6-cell battery pack
     float cellTemperatures[6]; // Temperature for each cell
     float maxCellVoltage; // Maximum cell voltage in the pack
@@ -31,11 +33,15 @@ struct BMSData {
 };
 
 struct SystemData {
-    float shuntVoltage; // Shunt voltage in mV
-    float shuntCurrent; // Current in A
-    float powerUse; // Power in mW
+    float solarShuntVoltage; // Shunt voltage in mV
+    float loadShuntVoltage; // Shunt voltage in mV
+    float solarShuntCurrent; // Current in A
+    float loadShuntCurrent; // Current in A
+    float solarPowerUse; // Power in mW
+    float loadPowerUse; // Power in mW
     DateTime rtcTime; // current time from RTC
-    BMSData bmsData; // Battery management system data
+    BattData batt; // Battery management system data
+    int error; // error code for system errors
 };
 
 //class definitions
@@ -48,12 +54,14 @@ private:
     static SystemData systemData; // struct to hold system data for easy access and updates
     
     int setupBMS(); //to be called to setup BMS
-    void updateBMS(); //to be called to update BMS
+    int updateBMS(); //to be called to update BMS
     int setupRTC(); //to be called to setup RTC
-    int setupINA226(); //to be called to setup INA226
+    int setupSolarINA(); //to be called to setup Solar INA
+    int setupLoadINA(); //to be called to setup Load INA
 
     // status
-    static int ina226Status; // status of INA226 setup (0 = not attempted, -1 = failed, 1 = successful)
+    static int solarInaStatus; // status of Solar INA setup (0 = not attempted, -1 = failed, 1 = successful)
+    static int loadInaStatus; // status of Load INA setup (0 = not attempted, -1 = failed, 1 = successful)
     static int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
     static int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
 
@@ -71,9 +79,10 @@ public:
     void removeObserver(observer* obs) override;
     void notifyObservers(const char* topic, const char* message) override;
 
-    void getShuntData(); //to be called to get shunt data
-    void getRTCData(); //to be called to get RTC data
-    void getBMSData(); //to be called to get BMS data
+    int getSolarShuntData(); //to be called to get shunt data
+    int getLoadShuntData(); //to be called to get shunt data
+    int getRTCData(); //to be called to get RTC data
+    int getBMSData(); //to be called to get BMS data
     int performSafetyChecks(); //to be called to perform safety checks
     void solarFETControl(bool state); //to control solar FETs
     void loadFETControl(bool state); //to control load FETs
