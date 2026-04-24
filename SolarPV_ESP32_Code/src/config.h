@@ -34,7 +34,8 @@ struct DeviceConfig {
     float min_cell_temperature;
     float max_pack_voltage;
     float min_pack_voltage;
-    float shunt_resistance;
+    float solar_shunt_resistance;
+    float load_shunt_resistance;
     float max_current;
     float fan_on_temperature;
     float fan_off_temperature;

@@ -79,7 +79,8 @@ void ConfigManager::loadConfig(const char* filename) {
         deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells;
     }
 
-    deviceConfig.shunt_resistance = doc["device_config"]["shunt_resistance"].as<float>();
+    deviceConfig.solar_shunt_resistance = doc["device_config"]["solar_shunt_resistance"].as<float>();
+    deviceConfig.load_shunt_resistance = doc["device_config"]["load_shunt_resistance"].as<float>();
     deviceConfig.max_current = doc["device_config"]["max_current"].as<float>();
 
     deviceConfig.fan_on_temperature = doc["device_config"]["fan_on_temperature"].as<float>();
@@ -170,10 +171,9 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["min_cell_voltage"] = deviceConfig.min_cell_voltage;
     doc["device_config"]["max_cell_temperature"] = deviceConfig.max_cell_temperature;
     doc["device_config"]["min_cell_temperature"] = deviceConfig.min_cell_temperature;
-    doc["device_config"]["max_pack_voltage"] = deviceConfig.max_pack_voltage;
-    doc["device_config"]["min_pack_voltage"] = deviceConfig.min_pack_voltage;
 
-    doc["device_config"]["shunt_resistance"] = deviceConfig.shunt_resistance;
+    doc["device_config"]["load_shunt_resistance"] = deviceConfig.load_shunt_resistance;
+    doc["device_config"]["solar_shunt_resistance"] = deviceConfig.solar_shunt_resistance;
     doc["device_config"]["max_current"] = deviceConfig.max_current;
 
     doc["device_config"]["fan_on_temperature"] = deviceConfig.fan_on_temperature;

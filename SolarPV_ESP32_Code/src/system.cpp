@@ -136,7 +136,7 @@ int SystemManager::setupSolarINA() {
     }
 
     // Configure the INA226 (e.g., calibration, averaging)
-    solarIna.setMaxCurrentShunt(deviceConfig.max_current, deviceConfig.shunt_resistance);
+    solarIna.setMaxCurrentShunt(deviceConfig.max_current, deviceConfig.solar_shunt_resistance);
     solarIna.setAverage(4); // Set averaging to 4 samples
     return 1; // Return success code
 }
@@ -153,7 +153,7 @@ int SystemManager::setupLoadINA() {
     }
 
     // Configure the INA226 (e.g., calibration, averaging)
-    loadIna.setMaxCurrentShunt(deviceConfig.max_current, deviceConfig.shunt_resistance);
+    loadIna.setMaxCurrentShunt(deviceConfig.max_current, deviceConfig.load_shunt_resistance);
     loadIna.setAverage(4); // Set averaging to 4 samples
     return 1; // Return success code
 }
@@ -169,14 +169,15 @@ int SystemManager::setupBMS(){
 
 void SystemManager::updateSystem() {
     //Serial.println("Updating System...");
+
     //##### SAFETY CHECKS #####
     Serial.println("Performing Safety Checks...");
-    // perform safety checks before executing main tasks
     systemData.error = performSafetyChecks();
 
     if(systemData.error != 0) {
         Serial.println("Safety check failed with error code: " + String(systemData.error) + ". Taking appropriate action.");
         // take appropriate action based on error code (e.g., shut down system, send alert, etc.)
+        return; // exit updateSystem early
     }
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
@@ -187,7 +188,7 @@ void SystemManager::updateSystem() {
     // get data from solar INA226
     if(solarInaStatus == 1) getSolarShuntData();
 
-    // get data from load INA226 (if enabled, otherwise will rely on solar INA226 data for power calculations)
+    // get data from load INA226 
     if(loadInaStatus == 1) getLoadShuntData();
 
     // get data from RTC
@@ -490,27 +491,27 @@ int SystemManager::performSafetyChecks(){
         return 5; // return error code for cell voltage below safety threshold
     }
 
-    // Check BMS communication
-    if(sys_flags.ENABLE_BMS && bmsStatus != 1) {
-        Serial.println("BMS communication failure detected!");
-        return 6; // return error code for BMS communication failure
-    }
+    // // Check BMS communication
+    // if(sys_flags.ENABLE_BMS && bmsStatus != 1) {
+    //     Serial.println("BMS communication failure detected!");
+    //     return 6; // return error code for BMS communication failure
+    // }
 
-    // Check RTC communication
-    if(sys_flags.ENABLE_RTC && rtcStatus != 1) {
-        Serial.println("RTC communication failure detected!");
-        return 7; // return error code for RTC communication failure
-    }
+    // // Check RTC communication
+    // if(sys_flags.ENABLE_RTC && rtcStatus != 1) {
+    //     Serial.println("RTC communication failure detected!");
+    //     return 7; // return error code for RTC communication failure
+    // }
 
-    // Check INA226 communication
-    if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
-        Serial.println("Solar INA communication failure detected!");
-        return 8; // return error code for solar INA communication failure
-    }
-    if(sys_flags.ENABLE_LOAD_INA && loadInaStatus != 1) {
-        Serial.println("Load INA communication failure detected!");
-        return 9; // return error code for load INA communication failure
-    }
+    // // Check INA226 communication
+    // if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
+    //     Serial.println("Solar INA communication failure detected!");
+    //     return 8; // return error code for solar INA communication failure
+    // }
+    // if(sys_flags.ENABLE_LOAD_INA && loadInaStatus != 1) {
+    //     Serial.println("Load INA communication failure detected!");
+    //     return 9; // return error code for load INA communication failure
+    // }
     // Check temperatures
     // Check component statuses for disconnects or faults
     return 0;
