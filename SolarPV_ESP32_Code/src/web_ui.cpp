@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <ArduinoJson.h>
+#include <LittleFS.h>
 
 using namespace std;
 
@@ -60,13 +61,13 @@ void WebUI::setupWebUI(){
 	auto my_updateObserversCallback = [this](Control *sender, int type) { this->updateObserversCallback(sender, type); };
 
 	//buttons
-	main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
-	ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, main_button, my_updateObserversCallback);
+	//main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
+	//ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
+	//ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, main_button, my_updateObserversCallback);
+	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, maintab, my_updateObserversCallback);
 
 
-	test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
+	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 	//switches
 	String switcherLabelStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset;";
@@ -102,16 +103,29 @@ void WebUI::setupWebUI(){
 	// display values
 	ESPUI.addControl(Separator, "System Data", "", None, maintab);
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, maintab, my_generalCallback);
-	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
-	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
-	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, maintab, my_generalCallback);
-	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, maintab, my_generalCallback);
+	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, rtc_time_label, my_generalCallback);
+	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, rtc_time_label, my_generalCallback);
+	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, rtc_time_label, my_generalCallback);
+	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, rtc_time_label, my_generalCallback);
+
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, rtc_time_label), "width: 100%; background-color: unset; border: unset;");
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC_Time", None, rtc_time_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar_Shunt_Current", None, rtc_time_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load_Shunt_Current", None, rtc_time_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Cell_Voltages", None, rtc_time_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Cell_Temperatures", None, rtc_time_label), switcherLabelStyle);
 
 	ESPUI.addControl(Separator, "Component Status", "", None, maintab);
 	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "", Wetasphalt, maintab, my_generalCallback);
-	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "", Wetasphalt, maintab, my_generalCallback);
-	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, maintab, my_generalCallback);
-	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, maintab, my_generalCallback);
+	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
+	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
+	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
+
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, solar_shunt_status_label), "width: 100%; background-color: unset; border: unset;");
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar_Shunt_Status", None, solar_shunt_status_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load_Shunt_Status", None, solar_shunt_status_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC_Status", None, solar_shunt_status_label), switcherLabelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Status", None, solar_shunt_status_label), switcherLabelStyle);
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
 	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "3.9", Wetasphalt, maintab, my_updateObserversCallback);
@@ -174,9 +188,20 @@ void WebUI::setupWebUI(){
 	ESPUI.addControl(Button, "Save", "Save", Peterriver, wifitab, my_enterWifiDetailsCallback);
 
 
+	/*
+	* Tab: Config File
+	* Download and upload config.json with validation.
+	*-----------------------------------------------------------------------------------------------------------*/
+	auto configTab = ESPUI.addControl(Tab, "", "Config Upload/Download");
+	ESPUI.addControl(Label, "Warning", "Contains WiFi and MQTT credentials. Only transfer on a trusted network.", Alizarin, configTab);
+	ESPUI.addControl(Label, "Download", "<button onclick=\"window.location='/config/download'\">Download config.json</button>", None, configTab);
+	ESPUI.addControl(Label, "Upload", "<form method='POST' action='/config/upload' enctype='multipart/form-data'><input type='file' name='config' accept='.json,application/json' required><button type='submit'>Upload config.json</button></form>", None, configTab);
+
+
 	//Finally, start up the UI. 
 	//This should only be called once we are connected to WiFi.
 	ESPUI.begin(wifiConfig.hostname.c_str());
+	registerConfigEndpoints();
 	webUiReady = true;
 }
 
@@ -226,6 +251,150 @@ void WebUI::readStringFromEEPROM(String& buf, int baseaddress, int size) {
 		buf += c;
 		if(!c) break;
 	}	
+}
+
+bool WebUI::validateConfigJsonFile(const char* path, String& errorMessage) {
+	File configFile = LittleFS.open(path, "r");
+	if (!configFile) {
+		errorMessage = "Failed to open uploaded config file";
+		return false;
+	}
+
+	JsonDocument doc;
+	DeserializationError error = deserializeJson(doc, configFile);
+	configFile.close();
+	if (error) {
+		errorMessage = String("Invalid JSON: ") + error.c_str();
+		return false;
+	}
+
+	if (!doc.is<JsonObject>()) {
+		errorMessage = "Config must be a JSON object";
+		return false;
+	}
+
+	if (!doc["wifi_config"].is<JsonObject>() || !doc["mqtt_config"].is<JsonObject>() || !doc["device_config"].is<JsonObject>()) {
+		errorMessage = "Missing one or more required sections: wifi_config, mqtt_config, device_config";
+		return false;
+	}
+
+	return true;
+}
+
+void WebUI::registerConfigEndpoints() {
+	AsyncWebServer* server = ESPUI.WebServer();
+	if (server == nullptr) {
+		Serial.println("Config endpoints not registered: web server is null");
+		return;
+	}
+
+	server->on("/config/download", HTTP_GET, [this](AsyncWebServerRequest* request) {
+		if (!LittleFS.begin(false)) {
+			request->send(500, "text/plain", "Failed to mount LittleFS");
+			return;
+		}
+
+		if (!LittleFS.exists(kConfigPath)) {
+			request->send(404, "text/plain", "config.json not found");
+			return;
+		}
+
+		AsyncWebServerResponse* response = request->beginResponse(LittleFS, kConfigPath, "application/json", true);
+		response->addHeader("Cache-Control", "no-store");
+		request->send(response);
+	});
+
+	server->on("/config/upload", HTTP_POST,
+		[this](AsyncWebServerRequest* request) {
+			if (configUploadFailed) {
+				String message = "Upload failed: " + configUploadError;
+				request->send(400, "text/plain", message);
+				return;
+			}
+
+			request->send(200, "text/plain", "Upload successful. New config.json is active.");
+		},
+		[this](AsyncWebServerRequest* request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
+			if (index == 0) {
+				configUploadFailed = false;
+				configUploadBytes = 0;
+				configUploadError = "";
+
+				if (!LittleFS.begin(false)) {
+					configUploadFailed = true;
+					configUploadError = "Failed to mount LittleFS";
+					return;
+				}
+
+				if (filename.length() == 0 || (!filename.endsWith(".json") && !filename.endsWith(".JSON"))) {
+					configUploadFailed = true;
+					configUploadError = "Only .json uploads are allowed";
+					return;
+				}
+
+				LittleFS.remove(kConfigUploadTempPath);
+				File initFile = LittleFS.open(kConfigUploadTempPath, "w");
+				if (!initFile) {
+					configUploadFailed = true;
+					configUploadError = "Failed to create temporary upload file";
+					return;
+				}
+				initFile.close();
+			}
+
+			if (configUploadFailed) {
+				if (final) {
+					LittleFS.remove(kConfigUploadTempPath);
+				}
+				return;
+			}
+
+			if ((configUploadBytes + len) > kMaxConfigUploadBytes) {
+				configUploadFailed = true;
+				configUploadError = "File too large (max 32KB)";
+				LittleFS.remove(kConfigUploadTempPath);
+				return;
+			}
+
+			File tempFile = LittleFS.open(kConfigUploadTempPath, "a");
+			if (!tempFile) {
+				configUploadFailed = true;
+				configUploadError = "Failed to open temporary upload file";
+				return;
+			}
+
+			size_t written = tempFile.write(data, len);
+			tempFile.close();
+			if (written != len) {
+				configUploadFailed = true;
+				configUploadError = "Failed to write full upload chunk";
+				LittleFS.remove(kConfigUploadTempPath);
+				return;
+			}
+
+			configUploadBytes += len;
+
+			if (final) {
+				String validationError;
+				if (!validateConfigJsonFile(kConfigUploadTempPath, validationError)) {
+					configUploadFailed = true;
+					configUploadError = validationError;
+					LittleFS.remove(kConfigUploadTempPath);
+					return;
+				}
+
+				LittleFS.remove(kConfigPath);
+				if (!LittleFS.rename(kConfigUploadTempPath, kConfigPath)) {
+					configUploadFailed = true;
+					configUploadError = "Failed to move uploaded file into place";
+					LittleFS.remove(kConfigUploadTempPath);
+					return;
+				}
+
+				ConfigManager::getInstance().loadConfig(kConfigPath);
+				Serial.println("New config.json uploaded and loaded successfully");
+			}
+		});
 }
 
 void WebUI::connectWifi() {

@@ -30,8 +30,15 @@ public:
 
 
 private:
+    static constexpr const char* kConfigPath = "/config.json";
+    static constexpr const char* kConfigUploadTempPath = "/config_upload.tmp";
+    static constexpr size_t kMaxConfigUploadBytes = 32768;
+
     std::vector<observer*> observers;
     BrokerManager* broker; //pointer to the broker manager
+    bool configUploadFailed = false;
+    size_t configUploadBytes = 0;
+    String configUploadError;
 
     //UI handles
     uint16_t wifi_ssid_text, wifi_pass_text;
@@ -55,6 +62,8 @@ private:
 
     //utility prototypes
     void readStringFromEEPROM(String& buf, int baseaddress, int size);
+    bool validateConfigJsonFile(const char* path, String& errorMessage);
+    void registerConfigEndpoints();
     
     //custom callbacks
     void enterWifiDetailsCallback(Control *sender, int type);
