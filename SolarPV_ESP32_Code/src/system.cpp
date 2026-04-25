@@ -12,14 +12,14 @@ using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 0, 
+    ENABLE_BMS: 1, 
     ENABLE_RTC: 0, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
     ENABLE_FAN: 0, 
     ENABLE_SOLAR_INA: 0, 
     ENABLE_LOAD_INA: 0,
-    ENABLE_FAKE_BATTERY: 1, // enable fake battery data for testing without BMS
+    ENABLE_FAKE_BATTERY: 0, // enable fake battery data for testing without BMS
 };
 SystemData SystemManager::systemData  = {
     solarShuntVoltage: 0.00,
@@ -54,6 +54,7 @@ INA226 loadIna(0x41); // Create an INA226 object for the load INA with a differe
 RTC_DS3231 rtc; // create clock object
 
 float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
+bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
 
 DeviceConfig deviceConfig;
 
@@ -169,10 +170,10 @@ int SystemManager::setupBMS(){
 
 void SystemManager::updateSystem() {
     //Serial.println("Updating System...");
-
+    Serial.println("-----");
     //##### SAFETY CHECKS #####
     Serial.println("Performing Safety Checks...");
-    systemData.error = performSafetyChecks();
+    if(!firstUpdate)systemData.error = performSafetyChecks();
 
     if(systemData.error != 0) {
         Serial.println("Safety check failed with error code: " + String(systemData.error) + ". Taking appropriate action.");
@@ -182,6 +183,7 @@ void SystemManager::updateSystem() {
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
     checkInitWithFlags();
+    Serial.println("Status flags: Solar INA: " + String(solarInaStatus) + ", Load INA: " + String(loadInaStatus) + ", RTC: " + String(rtcStatus) + ", BMS: " + String(bmsStatus));
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
@@ -197,7 +199,7 @@ void SystemManager::updateSystem() {
     // get data from BMS
     if(bmsStatus == 1) {
         bmsStatus = updateBMS(); // update BMS depending on even or odd day
-        getBMSData();
+        if(!sys_flags.ENABLE_FAKE_BATTERY) getBMSData(); // only get BMS data if not using fake battery data
     }
 
     // manage power only if BMS working or using test data (i.e., BMS disabled)
@@ -281,6 +283,8 @@ void SystemManager::updateSystem() {
         sendUpdatesToWebUI();
         Serial.println("Updates sent to Web UI.");
     }
+    if(firstUpdate) firstUpdate = false; // reset first update flag after initial update
+    Serial.println("-----");
 }
 
 void SystemManager::checkInitWithFlags()
@@ -434,11 +438,17 @@ int SystemManager::updateBMS() {
 
 // gets cell voltages and temperatures from the BMS
 int SystemManager::getBMSData(){
+    //Serial.print("Getting BMS data...   ");
     // BMS data retrieval logic
-    auto cellVoltages = getCellVoltages(); // get cell voltages from LTC6802
+    float* cellVoltages = getCellVoltages(); // get cell voltages from LTC6802
     for (int i = 0; i < 6; ++i) {
+        // Serial.print("Cell ");        Serial.print(i);
+        // Serial.print(" Voltage: ");
+        // Serial.print(cellVoltages[i]);
+        // Serial.println(" V");
         systemData.batt.cellVoltages[i] = cellVoltages[i];
     }
+    //Serial.println();
     return 1;
 }
 
@@ -457,7 +467,7 @@ int SystemManager::performSafetyChecks(){
     // 9: Load INA226 communication failure detected
 
     // Check overcurrent
-    if(systemData.loadShuntCurrent > deviceConfig.max_current && solarInaStatus == 1) {
+    if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
         Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.loadShuntCurrent) + " mA");
         loadFETControl(false); // cut power to loads
         return 1; // return error code for overcurrent
@@ -465,19 +475,19 @@ int SystemManager::performSafetyChecks(){
 
     // Check for FET failures
     // Solar should be disconnected but current is still flowing
-    if(!systemData.batt.isCharging && systemData.solarShuntCurrent > deviceConfig.max_current * 0.1) { // if solar FETs should be off but current is above 10% of max, assume FETs failed closed
+    if(!systemData.batt.isCharging && systemData.solarShuntCurrent > deviceConfig.max_current * 0.1 && solarInaStatus == 1) { // if solar FETs should be off but current is above 10% of max, assume FETs failed closed
         Serial.println("Solar FET failure detected! Current: " + String(systemData.solarShuntCurrent) + " mA");
         // TODO: add second layer of FETs
         return 2; // return error code for solar FET failure
     }
     // Battery should be disconnected but current is still flowing
-    if(!systemData.batt.isDischarging && systemData.loadShuntCurrent > deviceConfig.max_current * 0.1) { // if load FETs should be off but current is above 10% of max, assume FETs failed closed
+    if(!systemData.batt.isDischarging && systemData.loadShuntCurrent > deviceConfig.max_current * 0.1 && loadInaStatus == 1) { // if load FETs should be off but current is above 10% of max, assume FETs failed closed
         Serial.println("Load FET failure detected! Current: " + String(systemData.loadShuntCurrent) + " mA");
         // TODO: add second layer of FETs
         return 3; // return error code for load FET failure
     }
     // Solar should be connected but no current is flowing
-    if(systemData.batt.isCharging && systemData.solarShuntCurrent < deviceConfig.max_current * 0.1) { // if solar FETs should be on but current is below 10% of max, assume FETs failed open or panel disconnected
+    if(systemData.batt.isCharging && systemData.solarShuntCurrent < deviceConfig.max_current * 0.1 && solarInaStatus == 1) { // if solar FETs should be on but current is below 10% of max, assume FETs failed open or panel disconnected
         Serial.println("Solar FET failure or panel disconnect detected! Current: " + String(systemData.solarShuntCurrent) + " mA");
         loadFETControl(false); // cut power to loads to prevent battery drain
         return 4; // return error code for solar FET failure or panel disconnect

@@ -70,62 +70,72 @@ void WebUI::setupWebUI(){
 	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 	//switches
-	String switcherLabelStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset;";
+	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center;";
+	
+	fet_toggle_section = ESPUI.addControl(Separator, "FET Control", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Solar FETs:", None, fet_toggle_section), labelStyle);
+	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Load FETs:", None, fet_toggle_section), labelStyle);
+	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Fan:", None, fet_toggle_section), labelStyle);
+	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, fet_toggle_section), "width: 100%; background-color: unset; border: unset;");
 
-	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, maintab, my_updateObserversCallback);
-	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, toggle_solar_switcher, my_updateObserversCallback);
-	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, toggle_solar_switcher, my_updateObserversCallback);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, toggle_solar_switcher), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Solar_FETs", None, toggle_solar_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Load_FETs", None, toggle_solar_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Fan", None, toggle_solar_switcher), switcherLabelStyle);
-
-	ESPUI.addControl(Separator, "System Flags", "", None, maintab);
-	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, maintab, my_updateObserversCallback);
-	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_load_ina_switcher = ESPUI.addControl(Switcher, "Enable_Load_INA", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_solar_switcher = ESPUI.addControl(Switcher, "Enable_Solar_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_load_switcher = ESPUI.addControl(Switcher, "Enable_Load_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);	
-	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
+	system_flags_section = ESPUI.addControl(Separator, "System Flags", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable BMS:", None, system_flags_section), labelStyle);
+	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable RTC:", None, system_flags_section), labelStyle);
+	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar INA:", None, system_flags_section), labelStyle);
+	enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Load INA:", None, system_flags_section), labelStyle);
+	enable_load_ina_switcher = ESPUI.addControl(Switcher, "Enable_Load_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar FETs:", None, system_flags_section), labelStyle);
+	enable_solar_switcher = ESPUI.addControl(Switcher, "Enable_Solar_FETs", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Load FETs:", None, system_flags_section), labelStyle);
+	enable_load_switcher = ESPUI.addControl(Switcher, "Enable_Load_FETs", "", Wetasphalt, system_flags_section, my_updateObserversCallback);	
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Fan:", None, system_flags_section), labelStyle);
+	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 
 	//To label these switchers we need to first go onto a "new line" below the line of switchers
 	//To do this we add an empty label set to be clear and full width
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_BMS", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_RTC", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar_INA", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load_INA", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar_FETs", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load_FETs", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Fan", None, enable_bms_switcher), switcherLabelStyle);
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
 
 	// display values
-	ESPUI.addControl(Separator, "System Data", "", None, maintab);
-	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, maintab, my_generalCallback);
-	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, rtc_time_label, my_generalCallback);
-	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, rtc_time_label, my_generalCallback);
-	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, rtc_time_label, my_generalCallback);
-	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, rtc_time_label, my_generalCallback);
+	String dataStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset; font-size: 1rem; color: #76d21d; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center;";
 
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, rtc_time_label), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC_Time", None, rtc_time_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar_Shunt_Current", None, rtc_time_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load_Shunt_Current", None, rtc_time_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Cell_Voltages", None, rtc_time_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Cell_Temperatures", None, rtc_time_label), switcherLabelStyle);
+	system_data_section = ESPUI.addControl(Separator, "System Data", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC Time:", None, system_data_section), labelStyle);
+	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(rtc_time_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Current:", None, system_data_section), labelStyle);
+	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(solar_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Current:", None, system_data_section), labelStyle);
+	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(load_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Cell Voltages:", None, system_data_section), labelStyle);
+	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(cell_voltages_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Cell Temperatures:", None, system_data_section), labelStyle);
+	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(cell_temperatures_label, dataStyle);
 
-	ESPUI.addControl(Separator, "Component Status", "", None, maintab);
-	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "", Wetasphalt, maintab, my_generalCallback);
-	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
-	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
-	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, solar_shunt_status_label, my_generalCallback);
+	component_status_section = ESPUI.addControl(Separator, "Component Status", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
+	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(solar_shunt_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Status:", None, component_status_section), labelStyle);
+	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(load_shunt_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC Status:", None, component_status_section), labelStyle);
+	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(rtc_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Status:", None, component_status_section), labelStyle);
+	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(bms_status_label, dataStyle);
 
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, solar_shunt_status_label), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar_Shunt_Status", None, solar_shunt_status_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load_Shunt_Status", None, solar_shunt_status_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC_Status", None, solar_shunt_status_label), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS_Status", None, solar_shunt_status_label), switcherLabelStyle);
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, component_status_section), "width: 100%; background-color: unset; border: unset;");
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
 	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "3.9", Wetasphalt, maintab, my_updateObserversCallback);

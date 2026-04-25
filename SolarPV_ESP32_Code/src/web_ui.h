@@ -51,6 +51,8 @@ private:
     uint16_t rtc_time_label, solar_current_label, load_current_label, cell_voltages_label, cell_temperatures_label;
     //status labels
     uint16_t solar_shunt_status_label, load_shunt_status_label, rtc_status_label, bms_status_label, dns_status_label;
+    //divider sections
+    uint16_t fet_toggle_section, system_flags_section, system_data_section, component_status_section;
     //other
     uint16_t test_message_text, mainTime, testVoltageSlider;
 

@@ -2,8 +2,8 @@
     "wifi_config":{
         "hostname": "solar_pv",
         "force_use_hotspot": false,
-        "ssid": "your_wifi_ssid",
-        "password": "your_wifi_password"
+        "ssid": "plantphone",
+        "password": "growing23"
 
     },
 
@@ -20,7 +20,7 @@
 
     "device_config":{
         "device_id": "solar_pv_001",
-        "slow_boot": false,
+        "slow_boot": true,
         "num_cells": 6,
         "max_cell_voltage": 4.2,
         "min_cell_voltage": 3.2,

@@ -26,11 +26,12 @@ static const SPISettings spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE3)
 
 DeviceConfig device;
 
-static int BMS_CS = device.bms_cs_pin; // chip select pin for LTC6802, set in config
+static int BMS_CS; // chip select pin for LTC6802, set in config
 
 
 int setupLTC6802() {
   device = ConfigManager::getInstance().deviceConfig;
+  BMS_CS = device.bms_cs_pin;
 
   //start SPI
   SPI.begin(device.bms_clk_pin, device.bms_miso_pin, device.bms_mosi_pin);
@@ -38,11 +39,8 @@ int setupLTC6802() {
   pinMode(BMS_CS, OUTPUT);
   digitalWrite(BMS_CS, HIGH); //pull CS high to start
   delay(10); // allow the LTC6802 supply and reference to settle before SPI traffic
-  
-  cvr[0]=0;
-  cfr[0]=0;
-  cfr[1]=2;
-  cmnd[0] = 0;
+
+  Serial.println("SPI pins: CLK: " + String(device.bms_clk_pin) + ", MISO: " + String(device.bms_miso_pin) + ", MOSI: " + String(device.bms_mosi_pin) + ", CS: " + String(BMS_CS));
 
   writeLTCConfig();
 
@@ -140,8 +138,8 @@ void printCellVoltages(){
   Serial.println(cellvolts[11] * 1.5 / 1000);
 }
 
-uint8_t* getCellVoltages() {
-    static uint8_t cellVolts[12];
+float* getCellVoltages() {
+    static float cellVolts[12];
     word cellvolts[12];
     cellvolts[0] = cvr[0] | ((cvr[1] & 0x0F) << 8);
     cellvolts[1] = ((cvr[1] & 0xf0) >> 4) | (cvr[2] << 4);
@@ -162,7 +160,7 @@ uint8_t* getCellVoltages() {
     cellvolts[11] = ((cvr[16] & 0xf0) >> 4) | (cvr[17] << 4);
 
     for (int i = 0; i < 12; i++) {
-        cellVolts[i] = (uint8_t)(cellvolts[i] * 1.5 / 1000);
+        cellVolts[i] = (float)(cellvolts[i] * 1.5 / 1000);
     }
 
     return cellVolts;
@@ -204,12 +202,12 @@ void readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const
     digitalWrite(BMS_CS, HIGH);
     SPI.endTransaction();
 
-    for (int i = 0; i < numOfRegisters; ++i) // Print the read values for debugging
-    {
-      Serial.print(" 0x");
-      Serial.print(arr[i], HEX);
-    }
-    Serial.println();
+    // for (int i = 0; i < numOfRegisters; ++i) // Print the read values for debugging
+    // {
+    //   Serial.print(" 0x");
+    //   Serial.print(arr[i], HEX);
+    // }
+    //Serial.println();
 
   }
   while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
@@ -310,7 +308,6 @@ int updateLTC6802() {
   //   Serial.print(tmp[i]);
   // }
 
-  Serial.println();
   Serial.print("Config Register: ");
   for (int i=0; i<6; i++){
     Serial.print(cfr[i], HEX);
@@ -318,6 +315,5 @@ int updateLTC6802() {
   }
   Serial.println();
   //printDecodedConfigView();
-  Serial.println("-----");
   return 1; // Return success code
 }

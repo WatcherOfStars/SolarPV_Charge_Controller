@@ -12,7 +12,7 @@ void printCellVoltages();
 void displayLTC6802Config();
 void startLTC6802Conversion(const uint8_t command);
 void readLTC6802(const uint8_t command, const uint8_t numBytes, uint8_t* buffer);
-uint8_t* getCellVoltages();
+float* getCellVoltages();
 
 namespace constants {
 
