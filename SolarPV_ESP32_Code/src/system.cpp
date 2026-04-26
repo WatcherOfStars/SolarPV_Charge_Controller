@@ -685,7 +685,8 @@ void SystemManager::sendUpdatesToWebUI(){
     for (int i = 0; i < 6; ++i) temps.add(systemData.batt.cellTemperatures[i]);
 
     // Stautus of components
-    dataDoc["INA226_Status"] = solarInaStatus;
+    dataDoc["Solar_Shunt_Status"] = solarInaStatus;
+    dataDoc["Load_Shunt_Status"] = loadInaStatus;
     dataDoc["RTC_Status"] = rtcStatus;
     dataDoc["BMS_Status"] = bmsStatus;
 

@@ -52,7 +52,7 @@ private:
     //status labels
     uint16_t solar_shunt_status_label, load_shunt_status_label, rtc_status_label, bms_status_label, dns_status_label;
     //divider sections
-    uint16_t fet_toggle_section, system_flags_section, system_data_section, component_status_section;
+    uint16_t control_buttons_section, fet_toggle_section, system_flags_section, system_data_section, component_status_section;
     //other
     uint16_t test_message_text, mainTime, testVoltageSlider;
 

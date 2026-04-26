@@ -50,7 +50,7 @@ void WebUI::setupWebUI(){
 	*-----------------------------------------------------------------------------------------------------------*/
 	auto maintab = ESPUI.addControl(Tab, "", "Main Controls");
 
-	ESPUI.addControl(Separator, "General Controls", "", None, maintab);
+	control_buttons_section = ESPUI.addControl(Separator, "General Controls", "", None, maintab);
 
 	//Callback shortcuts
 	auto my_generalCallback = [this](Control *sender, int type) { this->generalCallback(sender, type); };
@@ -61,18 +61,18 @@ void WebUI::setupWebUI(){
 	auto my_updateObserversCallback = [this](Control *sender, int type) { this->updateObserversCallback(sender, type); };
 
 	//buttons
-	//main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
-	//ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
-	//ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, maintab, my_updateObserversCallback);
+	//main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, control_buttons_section, my_sendTestPub);
+	//ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, control_buttons_section, my_updateObserversCallback);
+	//ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, control_buttons_section, my_updateObserversCallback);
+	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, control_buttons_section, my_updateObserversCallback);
 
 
 	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 	//switches
-	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center;";
+	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .1rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 	
-	fet_toggle_section = ESPUI.addControl(Separator, "FET Control", "", None, maintab);
+	fet_toggle_section = ESPUI.addControl(Separator, "Manual FET Control", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Solar FETs:", None, fet_toggle_section), labelStyle);
 	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Load FETs:", None, fet_toggle_section), labelStyle);
@@ -102,26 +102,28 @@ void WebUI::setupWebUI(){
 	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
 
 	// display values
-	String dataStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset; font-size: 1rem; color: #76d21d; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center;";
+	String dataStyle = "width: 60px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 2rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+	String dataArrayStyle = "width: 300px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 1rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+
 
 	system_data_section = ESPUI.addControl(Separator, "System Data", "", None, maintab);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC Time:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Time:", None, system_data_section), labelStyle);
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(rtc_time_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Current:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(rtc_time_label, dataArrayStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Current:", None, system_data_section), labelStyle);
 	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(solar_current_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Current:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Current:", None, system_data_section), labelStyle);
 	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(load_current_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Cell Voltages:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Voltages:", None, system_data_section), labelStyle);
 	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(cell_voltages_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Cell Temperatures:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(cell_voltages_label, dataArrayStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Temps:", None, system_data_section), labelStyle);
 	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(cell_temperatures_label, dataStyle);
+	ESPUI.setElementStyle(cell_temperatures_label, dataArrayStyle);
 
-	component_status_section = ESPUI.addControl(Separator, "Component Status", "", None, maintab);
+	component_status_section = ESPUI.addControl(Separator, "Component Status (1:working, 0:disabled, -1:error/disconnected)", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
 	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
 	ESPUI.setElementStyle(solar_shunt_status_label, dataStyle);
