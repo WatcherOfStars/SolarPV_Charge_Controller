@@ -2,8 +2,8 @@
     "wifi_config":{
         "hostname": "solar_pv",
         "force_use_hotspot": false,
-        "ssid": "your_wifi_ssid",
-        "password": "your_wifi_password"
+        "ssid": "plantphone",
+        "password": "growing23"
 
     },
 
@@ -20,15 +20,16 @@
 
     "device_config":{
         "device_id": "solar_pv_001",
-        "slow_boot": false,
+        "slow_boot": true,
         "num_cells": 6,
         "max_cell_voltage": 4.2,
-        "min_cell_voltage": 3.0,
+        "min_cell_voltage": 3.2,
+        "safety_cell_voltage": 3.0,
+        "cell_voltage_hysteresis": 0.1,
         "max_cell_temperature": 60.0,
         "min_cell_temperature": -20.0,
-        "max_pack_voltage": 25.2,
-        "min_pack_voltage": 18.0,
-        "shunt_resistance": 0.00075,
+        "load_shunt_resistance": 0.000172,
+        "solar_shunt_resistance": 0.000238,
         "max_current": 20.0,
         "fan_on_temperature": 40.0,
         "fan_off_temperature": 35.0,
@@ -41,7 +42,6 @@
         "bms_mosi_pin": 23,
         "bms_miso_pin": 19,
         "bms_cs_pin": 5,
-        "bms_address": "0x80",
         "wire_scl_pin": 22,
         "wire_sda_pin": 21,
         "restart_pin": 2,

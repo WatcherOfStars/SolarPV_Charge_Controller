@@ -4,8 +4,6 @@
 #include <iostream>
 
 using namespace std;
-using namespace constants;
-
 
 // Event handler methods
 void mainEventHandler::onNotify(const char* topic, const char* message) {
@@ -32,14 +30,14 @@ void setup(){
   // Start serial communication for debugging
   Serial.begin(115200);
 	while(!Serial);
-	if(SLOW_BOOT) delay(5000); //Delay booting to give time to connect a serial monitor
-
-  // Setup debug light pin
-  pinMode(DEBUG_LIGHT, OUTPUT);
 
   // Load configuration from JSON file
   Serial.println("Loading configuration...");
-  //ConfigManager::getInstance().loadConfig("/config.json");
+  ConfigManager::getInstance().loadConfig("/config.json");
+  ConfigManager::getInstance().printConfig();
+  
+	if(ConfigManager::getInstance().deviceConfig.slow_boot) delay(5000); //Delay booting to give time to connect a serial monitor
+
 
   // Setup system
   Serial.println("Setting up system...");
@@ -78,11 +76,20 @@ static long unsigned lastTime = 0;
 void loop() {
 
   //##### UPDATE SYSTEM #####
-	if(millis() > lastTime + 5000) {
+	if(millis() > lastTime + 2000) {
     Serial.println("Starting Sys Loop...");
 
 		sys.updateSystem();
-    //ConfigManager::getInstance().printConfig();
+
+    // Serial.print("Config BMS MOSI Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_mosi_pin);
+    // Serial.print("Config BMS MISO Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_miso_pin);
+    // Serial.print("Config BMS CLK Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_clk_pin);
+    // Serial.print("Config BMS CS Pin: ");
+    // Serial.println(ConfigManager::getInstance().deviceConfig.bms_cs_pin);
+
 		lastTime = millis();
     //Serial.println("Sys Loop Done!");
 	}

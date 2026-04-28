@@ -3,20 +3,29 @@
 #include <EEPROM.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+//#include <DNSServer.h>
 #include <iostream>
 #include <algorithm>
 #include <ArduinoJson.h>
+#include <LittleFS.h>
 
-using namespace constants;
 using namespace std;
 
 volatile bool updates = false;
 
+WifiConfig wifiConfig;
+bool webUiReady = false;
+
 void WebUI::setupWebConn(){
+	//CALL THIS FIRST TO SETUP WIFI CONNECTION BEFORE SETTING UP THE UI
+	wifiConfig = ConfigManager::getInstance().wifiConfig;
+
 	connectWifi();
 
 	// Display the IP address of the ESP32 (MIGHT BREAK)
 	IPAddress IP = WiFi.softAPIP();
+	Serial.print("AP SSID: ");
+	Serial.println(WiFi.softAPNetworkID());
 	Serial.print("AP IP address: ");
 	Serial.println(IP);
 
@@ -41,7 +50,7 @@ void WebUI::setupWebUI(){
 	*-----------------------------------------------------------------------------------------------------------*/
 	auto maintab = ESPUI.addControl(Tab, "", "Main Controls");
 
-	ESPUI.addControl(Separator, "General Controls", "", None, maintab);
+	control_buttons_section = ESPUI.addControl(Separator, "General Controls", "", None, maintab);
 
 	//Callback shortcuts
 	auto my_generalCallback = [this](Control *sender, int type) { this->generalCallback(sender, type); };
@@ -52,60 +61,88 @@ void WebUI::setupWebUI(){
 	auto my_updateObserversCallback = [this](Control *sender, int type) { this->updateObserversCallback(sender, type); };
 
 	//buttons
-	main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, maintab, my_sendTestPub);
-	ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, main_button, my_updateObserversCallback);
-	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, main_button, my_updateObserversCallback);
+	//main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, control_buttons_section, my_sendTestPub);
+	//ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, control_buttons_section, my_updateObserversCallback);
+	//ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, control_buttons_section, my_updateObserversCallback);
+	ESPUI.addControl(Button, "Restart_System", "Restart_System", Wetasphalt, control_buttons_section, my_updateObserversCallback);
 
 
-	test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
+	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
 	//switches
-	String switcherLabelStyle = "width: 60px; margin-left: .3rem; margin-right: .3rem; background-color: unset;";
+	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .1rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+	
+	fet_toggle_section = ESPUI.addControl(Separator, "Manual FET Control", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Solar FETs:", None, fet_toggle_section), labelStyle);
+	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Load FETs:", None, fet_toggle_section), labelStyle);
+	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Fan:", None, fet_toggle_section), labelStyle);
+	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, fet_toggle_section), "width: 100%; background-color: unset; border: unset;");
 
-	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, maintab, my_updateObserversCallback);
-	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, toggle_solar_switcher, my_updateObserversCallback);
-	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, toggle_solar_switcher, my_updateObserversCallback);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, toggle_solar_switcher), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Solar_FETs", None, toggle_solar_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Load_FETs", None, toggle_solar_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Fan", None, toggle_solar_switcher), switcherLabelStyle);
-
-	ESPUI.addControl(Separator, "System Flags", "", None, maintab);
-	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, maintab, my_updateObserversCallback);
-	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_ina226_switcher = ESPUI.addControl(Switcher, "Enable_INA226", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_solar_switcher = ESPUI.addControl(Switcher, "Enable_Solar_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
-	enable_load_switcher = ESPUI.addControl(Switcher, "Enable_Load_FETs", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);	
-	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, enable_bms_switcher, my_updateObserversCallback);
+	system_flags_section = ESPUI.addControl(Separator, "System Flags", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable BMS:", None, system_flags_section), labelStyle);
+	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable RTC:", None, system_flags_section), labelStyle);
+	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar INA:", None, system_flags_section), labelStyle);
+	enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Load INA:", None, system_flags_section), labelStyle);
+	enable_load_ina_switcher = ESPUI.addControl(Switcher, "Enable_Load_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar FETs:", None, system_flags_section), labelStyle);
+	enable_solar_switcher = ESPUI.addControl(Switcher, "Enable_Solar_FETs", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Load FETs:", None, system_flags_section), labelStyle);
+	enable_load_switcher = ESPUI.addControl(Switcher, "Enable_Load_FETs", "", Wetasphalt, system_flags_section, my_updateObserversCallback);	
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Fan:", None, system_flags_section), labelStyle);
+	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 
 	//To label these switchers we need to first go onto a "new line" below the line of switchers
 	//To do this we add an empty label set to be clear and full width
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_BMS", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_RTC", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_INA226", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Solar", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Load", None, enable_bms_switcher), switcherLabelStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable_Fan", None, enable_bms_switcher), switcherLabelStyle);
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
 
 	// display values
-	ESPUI.addControl(Separator, "System Data", "", None, maintab);
-	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, maintab, my_generalCallback);
-	shunt_voltage_label = ESPUI.addControl(Label, "Shunt_Voltage", "", Wetasphalt, maintab, my_generalCallback);
-	current_label = ESPUI.addControl(Label, "Shunt_Current", "", Wetasphalt, maintab, my_generalCallback);
-	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, maintab, my_generalCallback);
-	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, maintab, my_generalCallback);
+	String dataStyle = "width: 60px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 2rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+	String dataArrayStyle = "width: 300px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 1rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 
-	ESPUI.addControl(Separator, "Component Status", "", None, maintab);
-	ina226_status_label = ESPUI.addControl(Label, "INA226_Status", "", Wetasphalt, maintab, my_generalCallback);
-	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "", Wetasphalt, maintab, my_generalCallback);
-	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "", Wetasphalt, maintab, my_generalCallback);
+
+	system_data_section = ESPUI.addControl(Separator, "System Data", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Time:", None, system_data_section), labelStyle);
+	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(rtc_time_label, dataArrayStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Current:", None, system_data_section), labelStyle);
+	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(solar_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Current:", None, system_data_section), labelStyle);
+	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(load_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Voltages:", None, system_data_section), labelStyle);
+	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(cell_voltages_label, dataArrayStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Temps:", None, system_data_section), labelStyle);
+	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(cell_temperatures_label, dataArrayStyle);
+
+	component_status_section = ESPUI.addControl(Separator, "Component Status (1:working, 0:disabled, -1:error/disconnected)", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
+	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(solar_shunt_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Status:", None, component_status_section), labelStyle);
+	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(load_shunt_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "RTC Status:", None, component_status_section), labelStyle);
+	rtc_status_label = ESPUI.addControl(Label, "RTC_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(rtc_status_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "BMS Status:", None, component_status_section), labelStyle);
+	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	ESPUI.setElementStyle(bms_status_label, dataStyle);
+
+	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, component_status_section), "width: 100%; background-color: unset; border: unset;");
 
 	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
-	// mainSlider = ESPUI.addControl(Slider, "Slider", "200", Wetasphalt, maintab, generalCallback);
-	// ESPUI.addControl(Min, "", "10", None, mainSlider);
-	// ESPUI.addControl(Max, "", "400", None, mainSlider);
+	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "3.9", Wetasphalt, maintab, my_updateObserversCallback);
+	ESPUI.addControl(Min, "", "0", None, testVoltageSlider);
+	ESPUI.addControl(Max, "", "5", None, testVoltageSlider);
 
 	//These are the values for the selector's options. (Note that they *must* be declared static
 	//so that the storage is allocated in global memory and not just on the stack of this function.)
@@ -163,9 +200,21 @@ void WebUI::setupWebUI(){
 	ESPUI.addControl(Button, "Save", "Save", Peterriver, wifitab, my_enterWifiDetailsCallback);
 
 
+	/*
+	* Tab: Config File
+	* Download and upload config.json with validation.
+	*-----------------------------------------------------------------------------------------------------------*/
+	auto configTab = ESPUI.addControl(Tab, "", "Config Upload/Download");
+	ESPUI.addControl(Label, "Warning", "Contains WiFi and MQTT credentials. Only transfer on a trusted network.", Alizarin, configTab);
+	ESPUI.addControl(Label, "Download", "<button onclick=\"window.location='/config/download'\">Download config.json</button>", None, configTab);
+	ESPUI.addControl(Label, "Upload", "<form method='POST' action='/config/upload' enctype='multipart/form-data'><input type='file' name='config' accept='.json,application/json' required><button type='submit'>Upload config.json</button></form>", None, configTab);
+
+
 	//Finally, start up the UI. 
 	//This should only be called once we are connected to WiFi.
-	ESPUI.begin(HOSTNAME);
+	ESPUI.begin(wifiConfig.hostname.c_str());
+	registerConfigEndpoints();
+	webUiReady = true;
 }
 
 
@@ -216,13 +265,157 @@ void WebUI::readStringFromEEPROM(String& buf, int baseaddress, int size) {
 	}	
 }
 
+bool WebUI::validateConfigJsonFile(const char* path, String& errorMessage) {
+	File configFile = LittleFS.open(path, "r");
+	if (!configFile) {
+		errorMessage = "Failed to open uploaded config file";
+		return false;
+	}
+
+	JsonDocument doc;
+	DeserializationError error = deserializeJson(doc, configFile);
+	configFile.close();
+	if (error) {
+		errorMessage = String("Invalid JSON: ") + error.c_str();
+		return false;
+	}
+
+	if (!doc.is<JsonObject>()) {
+		errorMessage = "Config must be a JSON object";
+		return false;
+	}
+
+	if (!doc["wifi_config"].is<JsonObject>() || !doc["mqtt_config"].is<JsonObject>() || !doc["device_config"].is<JsonObject>()) {
+		errorMessage = "Missing one or more required sections: wifi_config, mqtt_config, device_config";
+		return false;
+	}
+
+	return true;
+}
+
+void WebUI::registerConfigEndpoints() {
+	AsyncWebServer* server = ESPUI.WebServer();
+	if (server == nullptr) {
+		Serial.println("Config endpoints not registered: web server is null");
+		return;
+	}
+
+	server->on("/config/download", HTTP_GET, [this](AsyncWebServerRequest* request) {
+		if (!LittleFS.begin(false)) {
+			request->send(500, "text/plain", "Failed to mount LittleFS");
+			return;
+		}
+
+		if (!LittleFS.exists(kConfigPath)) {
+			request->send(404, "text/plain", "config.json not found");
+			return;
+		}
+
+		AsyncWebServerResponse* response = request->beginResponse(LittleFS, kConfigPath, "application/json", true);
+		response->addHeader("Cache-Control", "no-store");
+		request->send(response);
+	});
+
+	server->on("/config/upload", HTTP_POST,
+		[this](AsyncWebServerRequest* request) {
+			if (configUploadFailed) {
+				String message = "Upload failed: " + configUploadError;
+				request->send(400, "text/plain", message);
+				return;
+			}
+
+			request->send(200, "text/plain", "Upload successful. New config.json is active.");
+		},
+		[this](AsyncWebServerRequest* request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
+			if (index == 0) {
+				configUploadFailed = false;
+				configUploadBytes = 0;
+				configUploadError = "";
+
+				if (!LittleFS.begin(false)) {
+					configUploadFailed = true;
+					configUploadError = "Failed to mount LittleFS";
+					return;
+				}
+
+				if (filename.length() == 0 || (!filename.endsWith(".json") && !filename.endsWith(".JSON"))) {
+					configUploadFailed = true;
+					configUploadError = "Only .json uploads are allowed";
+					return;
+				}
+
+				LittleFS.remove(kConfigUploadTempPath);
+				File initFile = LittleFS.open(kConfigUploadTempPath, "w");
+				if (!initFile) {
+					configUploadFailed = true;
+					configUploadError = "Failed to create temporary upload file";
+					return;
+				}
+				initFile.close();
+			}
+
+			if (configUploadFailed) {
+				if (final) {
+					LittleFS.remove(kConfigUploadTempPath);
+				}
+				return;
+			}
+
+			if ((configUploadBytes + len) > kMaxConfigUploadBytes) {
+				configUploadFailed = true;
+				configUploadError = "File too large (max 32KB)";
+				LittleFS.remove(kConfigUploadTempPath);
+				return;
+			}
+
+			File tempFile = LittleFS.open(kConfigUploadTempPath, "a");
+			if (!tempFile) {
+				configUploadFailed = true;
+				configUploadError = "Failed to open temporary upload file";
+				return;
+			}
+
+			size_t written = tempFile.write(data, len);
+			tempFile.close();
+			if (written != len) {
+				configUploadFailed = true;
+				configUploadError = "Failed to write full upload chunk";
+				LittleFS.remove(kConfigUploadTempPath);
+				return;
+			}
+
+			configUploadBytes += len;
+
+			if (final) {
+				String validationError;
+				if (!validateConfigJsonFile(kConfigUploadTempPath, validationError)) {
+					configUploadFailed = true;
+					configUploadError = validationError;
+					LittleFS.remove(kConfigUploadTempPath);
+					return;
+				}
+
+				LittleFS.remove(kConfigPath);
+				if (!LittleFS.rename(kConfigUploadTempPath, kConfigPath)) {
+					configUploadFailed = true;
+					configUploadError = "Failed to move uploaded file into place";
+					LittleFS.remove(kConfigUploadTempPath);
+					return;
+				}
+
+				ConfigManager::getInstance().loadConfig(kConfigPath);
+				Serial.println("New config.json uploaded and loaded successfully");
+			}
+		});
+}
+
 void WebUI::connectWifi() {
 	int connect_timeout;
-	WiFi.setHostname(HOSTNAME);
+	WiFi.setHostname(wifiConfig.hostname.c_str());
 	Serial.println("Begin wifi...");
 
 	//Load credentials from EEPROM 
-	if(!(FORCE_USE_HOTSPOT)) {
+	if(!(wifiConfig.force_use_hotspot)) {
 		yield();
 		EEPROM.begin(100);
 		String stored_ssid, stored_pass;
@@ -245,17 +438,18 @@ void WebUI::connectWifi() {
 	}
 	
 	if (WiFi.status() == WL_CONNECTED) {
+
 		Serial.println(WiFi.localIP());
 		Serial.println("Wifi started");
 
-		if (!MDNS.begin(HOSTNAME)) {
+		if (!MDNS.begin(wifiConfig.hostname.c_str())) {
 			Serial.println("Error setting up MDNS responder!");
 		}
 	} else {
 		Serial.println("\nCreating access point...");
 		WiFi.mode(WIFI_AP);
 		WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-		WiFi.softAP(HOSTNAME);
+		WiFi.softAP(wifiConfig.hostname.c_str()); //append device ID to hotspot name to make it identifiable
 
 		connect_timeout = 20;
 		do {
@@ -346,14 +540,14 @@ void WebUI::onNotify(const char* topic, const char* message) {
 
 		//update labels based on message
 		//debut print to verify message parsing
-		Serial.print("WebUI recieved Shunt_Voltage: ");
-		Serial.println(doc["Shunt_Voltage"].as<const char*>());
-		Serial.print("WebUI recieved Shunt_Current: ");
-		Serial.println(doc["Shunt_Current"].as<const char*>());
+		// Serial.print("WebUI recieved Shunt_Voltage: ");
+		// Serial.println(doc["Shunt_Voltage"].as<const char*>());
+		// Serial.print("WebUI recieved Shunt_Current: ");
+		// Serial.println(doc["Shunt_Current"].as<const char*>());
 
 		if (!doc["RTC_Time"].isNull()) ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
-		if (!doc["Shunt_Voltage"].isNull()) ESPUI.updateLabel(shunt_voltage_label, doc["Shunt_Voltage"]);
-		if (!doc["Shunt_Current"].isNull()) ESPUI.updateLabel(current_label, doc["Shunt_Current"]);
+		if (!doc["Solar_Shunt_Current"].isNull()) ESPUI.updateLabel(solar_current_label, doc["Solar_Shunt_Current"]);
+		if (!doc["Load_Shunt_Current"].isNull()) ESPUI.updateLabel(load_current_label, doc["Load_Shunt_Current"]);
 		String cellVoltagesText;
 		String cellTemperaturesText;
 		if (doc["Cell_Voltages"].is<JsonArray>() || doc["Cell_Voltages"].is<JsonVariantConst>()) {
@@ -364,7 +558,8 @@ void WebUI::onNotify(const char* topic, const char* message) {
 			serializeJson(doc["Cell_Temperatures"], cellTemperaturesText);
 			ESPUI.updateLabel(cell_temperatures_label, cellTemperaturesText);
 		}
-		if (!doc["INA226_Status"].isNull()) ESPUI.updateLabel(ina226_status_label, doc["INA226_Status"]);
+		if (!doc["Solar_Shunt_Status"].isNull()) ESPUI.updateLabel(solar_shunt_status_label, doc["Solar_Shunt_Status"]);
+		if (!doc["Load_Shunt_Status"].isNull()) ESPUI.updateLabel(load_shunt_status_label, doc["Load_Shunt_Status"]);
 		if (!doc["RTC_Status"].isNull()) ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
 		if (!doc["BMS_Status"].isNull()) ESPUI.updateLabel(bms_status_label, doc["BMS_Status"]);
 	}
@@ -389,7 +584,8 @@ void WebUI::onNotify(const char* topic, const char* message) {
 		//update flags based on message
 		if (!doc["Enable_BMS"].isNull()) ESPUI.updateSwitcher(enable_bms_switcher, doc["Enable_BMS"]);
 		if (!doc["Enable_RTC"].isNull()) ESPUI.updateSwitcher(enable_rtc_switcher, doc["Enable_RTC"]);
-		if (!doc["Enable_INA226"].isNull()) ESPUI.updateSwitcher(enable_ina226_switcher, doc["Enable_INA226"]);
+		if (!doc["Enable_Solar_INA"].isNull()) ESPUI.updateSwitcher(enable_solar_ina_switcher, doc["Enable_Solar_INA"]);
+		if (!doc["Enable_Load_INA"].isNull()) ESPUI.updateSwitcher(enable_load_ina_switcher, doc["Enable_Load_INA"]);
 		if (!doc["Enable_Solar_FETs"].isNull()) ESPUI.updateSwitcher(enable_solar_switcher, doc["Enable_Solar_FETs"]);
 		if (!doc["Enable_Load_FETs"].isNull()) ESPUI.updateSwitcher(enable_load_switcher, doc["Enable_Load_FETs"]);
 		if (!doc["Enable_Fan"].isNull()) ESPUI.updateSwitcher(enable_fan_switcher, doc["Enable_Fan"]);

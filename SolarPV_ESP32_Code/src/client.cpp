@@ -4,10 +4,9 @@
 #include <iostream>
 #include <algorithm>
 
-using namespace constants;
 using namespace std;
 
-
+MqttConfig mqttConfig;
 
 // ========== MQTT Client manager ==========
 ESP32MQTTClient mqttClient; // all params are set later
@@ -17,15 +16,18 @@ void MqttClientManager::setupClient(){ //Client &set_client
     // Set callback to notify observers instead of empty callback
     //auto my_callback = [this](char* topic, uint8_t* payload, unsigned int length) { this->notifyObservers(topic, (char*)payload); };
 
+    mqttConfig = ConfigManager::getInstance().mqttConfig;
+
+
     mqttClient.enableDebuggingMessages();
     mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str()); // set client name to something unique using the MAC address
 
-    std::cout << "Connecting to MQTT broker at " << C_MQTT_BROKER_ADDRESS << std::endl;
-    std::cout << "Using username: " << C_MQTT_CLIENT_USER << std::endl;
-    std::cout << "Using password: " << C_MQTT_CLIENT_PASSWORD << std::endl;
+    std::cout << "Connecting to MQTT broker at " << mqttConfig.broker << std::endl;
+    std::cout << "Using username: " << mqttConfig.username << std::endl;
+    std::cout << "Using password: " << mqttConfig.password << std::endl;
     std::cout << "Using client name: " << mqttClient.getClientName() << std::endl;
 
-    mqttClient.setURI(C_MQTT_BROKER_ADDRESS, C_MQTT_CLIENT_USER, C_MQTT_CLIENT_PASSWORD); // set broker address and credentials
+    mqttClient.setURI(mqttConfig.broker.c_str(), mqttConfig.username.c_str(), mqttConfig.password.c_str()); // set broker address and credentials
     mqttClient.enableLastWillMessage("lwt", "I am going offline");
     mqttClient.setKeepAlive(30);
     // mqttClient.subscribe(CLIENT_SUB, [this](const std::string &topic, const std::string &payload) { // set callback to notify observers instead of empty callback
@@ -58,8 +60,8 @@ void onMqttConnect(esp_mqtt_client_handle_t client)
 {
     if (mqttClient.isMyTurn(client)) // can be omitted if only one client
     {
-        std::cout << "MQTT client connected! Subscribed to topic: " << constants::CLIENT_SUB << std::endl;
-        mqttClient.subscribe(constants::CLIENT_SUB, [](const std::string &topic, const std::string &payload)
+        std::cout << "MQTT client connected! Subscribed to topic: " << mqttConfig.command_topic << std::endl;
+        mqttClient.subscribe(mqttConfig.command_topic.c_str(), [](const std::string &topic, const std::string &payload)
                              { log_i("%s: %s", topic.c_str(), payload.c_str()); });
     }
 }

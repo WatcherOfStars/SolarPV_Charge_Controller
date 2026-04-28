@@ -15,9 +15,11 @@ void ConfigManager::loadConfig(const char* filename) {
     }
     File configFile = LittleFS.open(filename, "r");
     if (!configFile) {
-        Serial.println("Failed to open config file");
+        Serial.println("ERROR: Failed to open config file");
+        LittleFS.end();
         return;
     }
+    
     while (configFile.available()) {
         Serial.print((char)configFile.read());
     }
@@ -25,73 +27,83 @@ void ConfigManager::loadConfig(const char* filename) {
     size_t size = configFile.size();
     Serial.print("Config file size: ");
     Serial.println(size);
-    // if (size > 1024) {
-    //     Serial.println("Config file size is too large");
-    //     return;
-    // }
+    
     std::unique_ptr<char[]> buf(new char[size]);
     configFile.readBytes(buf.get(), size);
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, buf.get());
     configFile.close();
+    
     if (error) {
-        Serial.print("Failed to parse config file: ");
+        Serial.print("ERROR: Failed to parse config file: ");
         Serial.println(error.c_str());
+        LittleFS.end();
         return;
     }
     LittleFS.end();
 
     // Populate config structs from JSON
-    wifiConfig.hostname = doc["wifi_config"]["hostname"];
-    wifiConfig.force_use_hotspot = doc["wifi_config"]["force_use_hotspot"];
-    wifiConfig.ssid = doc["wifi_config"]["ssid"];
-    wifiConfig.password = doc["wifi_config"]["password"];
+    wifiConfig.hostname = doc["wifi_config"]["hostname"].as<String>();
+    wifiConfig.force_use_hotspot = doc["wifi_config"]["force_use_hotspot"].as<bool>();
+    wifiConfig.ssid = doc["wifi_config"]["ssid"].as<String>();
+    wifiConfig.password = doc["wifi_config"]["password"].as<String>();
 
-    mqttConfig.broker = doc["mqtt_config"]["broker"];
-    mqttConfig.port = doc["mqtt_config"]["port"];
-    mqttConfig.username = doc["mqtt_config"]["username"];
-    mqttConfig.password = doc["mqtt_config"]["password"];
-    mqttConfig.data_topic = doc["mqtt_config"]["data_topic"];
-    mqttConfig.command_topic = doc["mqtt_config"]["command_topic"];
-    mqttConfig.status_topic = doc["mqtt_config"]["status_topic"];
-    mqttConfig.client_id = doc["mqtt_config"]["client_id"];
+    mqttConfig.broker = doc["mqtt_config"]["broker"].as<String>();
+    mqttConfig.port = doc["mqtt_config"]["port"].as<int>();
+    mqttConfig.username = doc["mqtt_config"]["username"].as<String>();
+    mqttConfig.password = doc["mqtt_config"]["password"].as<String>();
+    mqttConfig.data_topic = doc["mqtt_config"]["data_topic"].as<String>();
+    mqttConfig.command_topic = doc["mqtt_config"]["command_topic"].as<String>();
+    mqttConfig.status_topic = doc["mqtt_config"]["status_topic"].as<String>();
+    mqttConfig.client_id = doc["mqtt_config"]["client_id"].as<String>();
 
-    deviceConfig.device_id = doc["device_config"]["device_id"];
-    deviceConfig.slow_boot = doc["device_config"]["slow_boot"];
+    deviceConfig.device_id = doc["device_config"]["device_id"].as<String>();
+    deviceConfig.slow_boot = doc["device_config"]["slow_boot"].as<bool>();
 
-    deviceConfig.num_cells = doc["device_config"]["num_cells"];
-    deviceConfig.max_cell_voltage = doc["device_config"]["max_cell_voltage"];
-    deviceConfig.min_cell_voltage = doc["device_config"]["min_cell_voltage"];
-    deviceConfig.max_cell_temperature = doc["device_config"]["max_cell_temperature"];
-    deviceConfig.min_cell_temperature = doc["device_config"]["min_cell_temperature"];
-    deviceConfig.max_pack_voltage = doc["device_config"]["max_pack_voltage"];
-    deviceConfig.min_pack_voltage = doc["device_config"]["min_pack_voltage"];
+    deviceConfig.num_cells = doc["device_config"]["num_cells"].as<int>();
+    deviceConfig.max_cell_voltage = doc["device_config"]["max_cell_voltage"].as<float>();
+    deviceConfig.min_cell_voltage = doc["device_config"]["min_cell_voltage"].as<float>();
+    deviceConfig.safety_cell_voltage = doc["device_config"]["safety_cell_voltage"].as<float>();
+    deviceConfig.cell_voltage_hysteresis = doc["device_config"]["cell_voltage_hysteresis"].as<float>();
+    deviceConfig.max_cell_temperature = doc["device_config"]["max_cell_temperature"].as<float>();
+    deviceConfig.min_cell_temperature = doc["device_config"]["min_cell_temperature"].as<float>();
+    
+    // Prevent division by zero if num_cells is not properly loaded
+    if (deviceConfig.num_cells > 0) {
+        deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells;
+        deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells;
+    } else {
+        Serial.println("ERROR: num_cells is still 0 after loading config!");
+        deviceConfig.num_cells = 6; // Fallback to default
+        deviceConfig.max_pack_voltage = deviceConfig.max_cell_voltage * deviceConfig.num_cells;
+        deviceConfig.min_pack_voltage = deviceConfig.min_cell_voltage * deviceConfig.num_cells;
+    }
 
-    deviceConfig.shunt_resistance = doc["device_config"]["shunt_resistance"];
-    deviceConfig.max_current = doc["device_config"]["max_current"];
+    deviceConfig.solar_shunt_resistance = doc["device_config"]["solar_shunt_resistance"].as<float>();
+    deviceConfig.load_shunt_resistance = doc["device_config"]["load_shunt_resistance"].as<float>();
+    deviceConfig.max_current = doc["device_config"]["max_current"].as<float>();
 
-    deviceConfig.fan_on_temperature = doc["device_config"]["fan_on_temperature"];
-    deviceConfig.fan_off_temperature = doc["device_config"]["fan_off_temperature"];
-    deviceConfig.low_battery_threshold = doc["device_config"]["low_battery_threshold"];
-    deviceConfig.high_battery_threshold = doc["device_config"]["high_battery_threshold"];
-    deviceConfig.full_battery_threshold = doc["device_config"]["full_battery_threshold"];
-    deviceConfig.low_battery_discharge_threshold = doc["device_config"]["low_battery_discharge_threshold"];
+    deviceConfig.fan_on_temperature = doc["device_config"]["fan_on_temperature"].as<float>();
+    deviceConfig.fan_off_temperature = doc["device_config"]["fan_off_temperature"].as<float>();
+    deviceConfig.low_battery_threshold = doc["device_config"]["low_battery_threshold"].as<float>();
+    deviceConfig.high_battery_threshold = doc["device_config"]["high_battery_threshold"].as<float>();
+    deviceConfig.full_battery_threshold = doc["device_config"]["full_battery_threshold"].as<float>();
+    deviceConfig.low_battery_discharge_threshold = doc["device_config"]["low_battery_discharge_threshold"].as<float>();
 
-    deviceConfig.fan_duty_cycle = doc["device_config"]["fan_duty_cycle"];
+    deviceConfig.fan_duty_cycle = doc["device_config"]["fan_duty_cycle"].as<float>();
 
-    deviceConfig.bms_clk_pin = doc["device_config"]["bms_clk_pin"];
-    deviceConfig.bms_mosi_pin = doc["device_config"]["bms_mosi_pin"];
-    deviceConfig.bms_miso_pin = doc["device_config"]["bms_miso_pin"];
-    deviceConfig.bms_cs_pin = doc["device_config"]["bms_cs_pin"];
-    deviceConfig.bms_address = doc["device_config"]["bms_address"];
+    deviceConfig.bms_clk_pin = doc["device_config"]["bms_clk_pin"].as<int>();
+    deviceConfig.bms_mosi_pin = doc["device_config"]["bms_mosi_pin"].as<int>();
+    deviceConfig.bms_miso_pin = doc["device_config"]["bms_miso_pin"].as<int>();
+    deviceConfig.bms_cs_pin = doc["device_config"]["bms_cs_pin"].as<int>();
 
-    deviceConfig.wire_scl_pin = doc["device_config"]["wire_scl_pin"];
-    deviceConfig.wire_sda_pin = doc["device_config"]["wire_sda_pin"];
+    deviceConfig.wire_scl_pin = doc["device_config"]["wire_scl_pin"].as<int>();
+    deviceConfig.wire_sda_pin = doc["device_config"]["wire_sda_pin"].as<int>();
 
-    deviceConfig.restart_pin = doc["device_config"]["restart_pin"];
-    deviceConfig.solar_fet_pin = doc["device_config"]["solar_fet_pin"];
-    deviceConfig.load_fet_pin = doc["device_config"]["load_fet_pin"];
-    deviceConfig.fan_pin = doc["device_config"]["fan_pin"];
+    deviceConfig.restart_pin = doc["device_config"]["restart_pin"].as<int>();
+    deviceConfig.solar_fet_pin = doc["device_config"]["solar_fet_pin"].as<int>();
+    deviceConfig.load_fet_pin = doc["device_config"]["load_fet_pin"].as<int>();
+    deviceConfig.fan_pin = doc["device_config"]["fan_pin"].as<int>();
 }
 
 void ConfigManager::printConfig() {
@@ -159,10 +171,9 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["min_cell_voltage"] = deviceConfig.min_cell_voltage;
     doc["device_config"]["max_cell_temperature"] = deviceConfig.max_cell_temperature;
     doc["device_config"]["min_cell_temperature"] = deviceConfig.min_cell_temperature;
-    doc["device_config"]["max_pack_voltage"] = deviceConfig.max_pack_voltage;
-    doc["device_config"]["min_pack_voltage"] = deviceConfig.min_pack_voltage;
 
-    doc["device_config"]["shunt_resistance"] = deviceConfig.shunt_resistance;
+    doc["device_config"]["load_shunt_resistance"] = deviceConfig.load_shunt_resistance;
+    doc["device_config"]["solar_shunt_resistance"] = deviceConfig.solar_shunt_resistance;
     doc["device_config"]["max_current"] = deviceConfig.max_current;
 
     doc["device_config"]["fan_on_temperature"] = deviceConfig.fan_on_temperature;
@@ -176,7 +187,6 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["bms_mosi_pin"] = deviceConfig.bms_mosi_pin;
     doc["device_config"]["bms_miso_pin"] = deviceConfig.bms_miso_pin;
     doc["device_config"]["bms_cs_pin"] = deviceConfig.bms_cs_pin;
-    doc["device_config"]["bms_address"] = deviceConfig.bms_address;
     doc["device_config"]["wire_scl_pin"] = deviceConfig.wire_scl_pin;
     doc["device_config"]["wire_sda_pin"] = deviceConfig.wire_sda_pin;
     doc["device_config"]["restart_pin"] = deviceConfig.restart_pin;
@@ -192,6 +202,7 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     }
     serializeJson(doc, configFile);
     configFile.close();
+    LittleFS.end();
 }
 
 void ConfigManager::writeConfig(const char* filename, JsonDocument config) {
@@ -204,4 +215,5 @@ void ConfigManager::writeConfig(const char* filename, JsonDocument config) {
     }
     serializeJson(config, configFile);
     configFile.close();
+    LittleFS.end();
 }

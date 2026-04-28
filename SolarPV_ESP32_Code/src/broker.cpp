@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 
-using namespace constants;
 using namespace std;
+
+String username;
+String password;
 
 // Handle MQTT events, including client connection, wifi disconnects, subscriptions, etc.
 bool MyBroker::onEvent(sMQTTEvent *event)
@@ -16,7 +18,7 @@ bool MyBroker::onEvent(sMQTTEvent *event)
         {
             sMQTTNewClientEvent *e=(sMQTTNewClientEvent*)event;
             // Check username and password used for new connection
-            if ((e->Login() != MQTT_CLIENT_USER) || (e->Password() != MQTT_CLIENT_PASSWORD)) {
+            if ((e->Login() != username.c_str()) || (e->Password() != password.c_str())) {
                 Serial.println("Invalid username or password");  
                 return false;
                 }
@@ -38,14 +40,16 @@ bool MyBroker::onEvent(sMQTTEvent *event)
 
 // Initialize the MQTT broker on the specified port.
 void BrokerManager::setupBroker(){
-    broker.init(MQTT_PORT);
-    std::cout << "MQTT Broker initialized on port " << MQTT_PORT << std::endl;
+    broker.init(ConfigManager::getInstance().mqttConfig.port);
+    username = ConfigManager::getInstance().mqttConfig.username;
+    password = ConfigManager::getInstance().mqttConfig.password;
+    std::cout << "MQTT Broker initialized on port " << ConfigManager::getInstance().mqttConfig.port << std::endl;
 }
 
 // Update broker, should be called in main loop.
 void BrokerManager::updateBroker(){
     broker.update();
-    //std::cout << "MQTT Broker updated on port " << MQTT_PORT << std::endl;
+    //std::cout << "MQTT Broker updated on port " << config.mqttConfig.port << std::endl;
 }
 
 // Get reference to the internal broker instance.

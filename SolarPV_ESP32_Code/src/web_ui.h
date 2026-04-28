@@ -7,14 +7,8 @@
 #include <broker.h>
 #include <vector>
 #include "observer.h"
+#include "config.h"
 
-
-//consts
-// namespace constants { inline constexpr double PI = 3.14; }
-namespace constants {
-    inline constexpr const char* HOSTNAME = "ESPUITest2";
-    inline constexpr int FORCE_USE_HOTSPOT = 0;
-}
 
 
 //class prototype
@@ -36,8 +30,15 @@ public:
 
 
 private:
+    static constexpr const char* kConfigPath = "/config.json";
+    static constexpr const char* kConfigUploadTempPath = "/config_upload.tmp";
+    static constexpr size_t kMaxConfigUploadBytes = 32768;
+
     std::vector<observer*> observers;
     BrokerManager* broker; //pointer to the broker manager
+    bool configUploadFailed = false;
+    size_t configUploadBytes = 0;
+    String configUploadError;
 
     //UI handles
     uint16_t wifi_ssid_text, wifi_pass_text;
@@ -45,13 +46,15 @@ private:
     //control switches
     uint16_t toggle_solar_switcher, toggle_load_switcher, toggle_fan_switcher;
     //system flag switches
-    uint16_t enable_bms_switcher, enable_rtc_switcher, enable_ina226_switcher, enable_solar_switcher, enable_load_switcher, enable_fan_switcher;
+    uint16_t enable_bms_switcher, enable_rtc_switcher, enable_solar_ina_switcher, enable_load_ina_switcher, enable_solar_switcher, enable_load_switcher, enable_fan_switcher;
     //values
-    uint16_t rtc_time_label, shunt_voltage_label, current_label, cell_voltages_label, cell_temperatures_label;
+    uint16_t rtc_time_label, solar_current_label, load_current_label, cell_voltages_label, cell_temperatures_label;
     //status labels
-    uint16_t ina226_status_label, rtc_status_label, bms_status_label;
+    uint16_t solar_shunt_status_label, load_shunt_status_label, rtc_status_label, bms_status_label, dns_status_label;
+    //divider sections
+    uint16_t control_buttons_section, fet_toggle_section, system_flags_section, system_data_section, component_status_section;
     //other
-    uint16_t test_message_text, mainTime;
+    uint16_t test_message_text, mainTime, testVoltageSlider;
 
     // prototypes
     void generalCallback(Control *sender, int type);
@@ -61,6 +64,8 @@ private:
 
     //utility prototypes
     void readStringFromEEPROM(String& buf, int baseaddress, int size);
+    bool validateConfigJsonFile(const char* path, String& errorMessage);
+    void registerConfigEndpoints();
     
     //custom callbacks
     void enterWifiDetailsCallback(Control *sender, int type);
