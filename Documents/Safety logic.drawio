@@ -1,0 +1,119 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram name="Page-1" id="z_U0rjG4qpinmhz_tbbO">
+    <mxGraphModel dx="784" dy="1192" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-1" target="PCgZEmNC_Yze_m3BdC_N-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-1" value="Start" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#B3B3B3;strokeColor=#030303;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-2" target="PCgZEmNC_Yze_m3BdC_N-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-2" target="PCgZEmNC_Yze_m3BdC_N-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-32" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="PCgZEmNC_Yze_m3BdC_N-13">
+          <mxGeometry x="-0.319" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-2" value="if overcurrent detected" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="220" y="160" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-4" target="PCgZEmNC_Yze_m3BdC_N-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-4" target="PCgZEmNC_Yze_m3BdC_N-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-33" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="PCgZEmNC_Yze_m3BdC_N-15">
+          <mxGeometry x="-0.1486" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-4" value="if solar FETs off but current still flowing&amp;nbsp;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="210" y="280" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-6" target="PCgZEmNC_Yze_m3BdC_N-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-6" target="PCgZEmNC_Yze_m3BdC_N-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-34" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="PCgZEmNC_Yze_m3BdC_N-17">
+          <mxGeometry x="-0.1029" y="1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-6" value="if load FETs off but current still flowing" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="210" y="400" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-8" target="PCgZEmNC_Yze_m3BdC_N-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-8" target="PCgZEmNC_Yze_m3BdC_N-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-35" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="PCgZEmNC_Yze_m3BdC_N-19">
+          <mxGeometry x="-0.0343" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-8" value="if solar FETs connected but no current flowing" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="210" y="520" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-10" target="PCgZEmNC_Yze_m3BdC_N-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-36" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="PCgZEmNC_Yze_m3BdC_N-21">
+          <mxGeometry x="-0.0343" y="2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-10" target="PCgZEmNC_Yze_m3BdC_N-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-10" value="if battery voltages outside safe limits" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="210" y="640" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-12" target="PCgZEmNC_Yze_m3BdC_N-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-12" value="cut power to loads, return error code 1" style="whiteSpace=wrap;html=1;fillColor=#F19C99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="170" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-14" target="PCgZEmNC_Yze_m3BdC_N-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-14" value="trigger backup FETs, return error code 2" style="whiteSpace=wrap;html=1;fillColor=#F19C99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="290" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-16" target="PCgZEmNC_Yze_m3BdC_N-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-16" value="return error code 3" style="whiteSpace=wrap;html=1;fillColor=#F19C99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="410" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-18" target="PCgZEmNC_Yze_m3BdC_N-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-18" value="cut power to loads, return error code 4" style="whiteSpace=wrap;html=1;fillColor=#F19C99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="530" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="PCgZEmNC_Yze_m3BdC_N-20" target="PCgZEmNC_Yze_m3BdC_N-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-20" value="shut down system using emergency circuit" style="whiteSpace=wrap;html=1;fillColor=#F19C99;" vertex="1" parent="1">
+          <mxGeometry x="560" y="650" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="PCgZEmNC_Yze_m3BdC_N-22" value="no errors! continue to main system control code." style="whiteSpace=wrap;html=1;fillColor=#B9E0A5;" vertex="1" parent="1">
+          <mxGeometry x="210" y="760" width="300" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

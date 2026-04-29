@@ -1,0 +1,69 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
+  <diagram name="Page-1" id="Hpm-LZ3IjRP9G5SF4WYz">
+    <mxGraphModel dx="784" dy="1192" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tf86RyXqgCmbRrH-FhmI-1" target="tf86RyXqgCmbRrH-FhmI-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="230" />
+              <mxPoint x="400" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-11" value="onNotify()" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="tf86RyXqgCmbRrH-FhmI-5">
+          <mxGeometry x="0.8614" y="1" relative="1" as="geometry">
+            <mxPoint x="-9" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tf86RyXqgCmbRrH-FhmI-1" target="tf86RyXqgCmbRrH-FhmI-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-12" value="onNotify()" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="tf86RyXqgCmbRrH-FhmI-6">
+          <mxGeometry x="0.7426" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tf86RyXqgCmbRrH-FhmI-1" target="tf86RyXqgCmbRrH-FhmI-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="230" />
+              <mxPoint x="400" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-13" value="onNotify()" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="tf86RyXqgCmbRrH-FhmI-7">
+          <mxGeometry x="0.8159" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="tf86RyXqgCmbRrH-FhmI-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="239.9999999999999" y="229.8965517241379" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-10" value="sends&lt;div&gt;update&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="tf86RyXqgCmbRrH-FhmI-9">
+          <mxGeometry x="-0.1627" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-1" value="SUBJECT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCFF;strokeColor=#040608;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-2" value="OBSERVER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCFFCC;" vertex="1" parent="1">
+          <mxGeometry x="477.49999999999994" y="120" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-3" value="OBSERVER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCFFCC;" vertex="1" parent="1">
+          <mxGeometry x="477.49999999999994" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-4" value="OBSERVER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCFFCC;" vertex="1" parent="1">
+          <mxGeometry x="477.49999999999994" y="280" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tf86RyXqgCmbRrH-FhmI-8" value="Message with topic and value strings" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE599;" vertex="1" parent="1">
+          <mxGeometry x="240" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
