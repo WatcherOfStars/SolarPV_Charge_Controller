@@ -41,8 +41,7 @@ void WebUI::setupWebUI(){
 	//Turn off verbose debugging
 	//ESPUI.setVerbosity(Verbosity::Quiet);
 
-	//Make sliders continually report their position as they are being dragged.
-	ESPUI.sliderContinuous = true;
+	ESPUI.sliderContinuous = false;
 
 	/*
 	* Tab: Main Controls
@@ -69,7 +68,7 @@ void WebUI::setupWebUI(){
 
 	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
-	//switches
+	// manual FET control
 	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .1rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 	
 	fet_toggle_section = ESPUI.addControl(Separator, "Manual FET Control", "", None, maintab);
@@ -79,8 +78,8 @@ void WebUI::setupWebUI(){
 	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Fan:", None, fet_toggle_section), labelStyle);
 	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
-	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, fet_toggle_section), "width: 100%; background-color: unset; border: unset;");
 
+	// system flags
 	system_flags_section = ESPUI.addControl(Separator, "System Flags", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable BMS:", None, system_flags_section), labelStyle);
 	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
@@ -97,15 +96,11 @@ void WebUI::setupWebUI(){
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Fan:", None, system_flags_section), labelStyle);
 	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 
-	//To label these switchers we need to first go onto a "new line" below the line of switchers
-	//To do this we add an empty label set to be clear and full width
-	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, enable_bms_switcher), "width: 100%; background-color: unset; border: unset;");
-
 	// display values
 	String dataStyle = "width: 60px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 2rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 	String dataArrayStyle = "width: 300px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 1rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 
-
+	// System Data
 	system_data_section = ESPUI.addControl(Separator, "System Data", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Time:", None, system_data_section), labelStyle);
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
@@ -123,6 +118,7 @@ void WebUI::setupWebUI(){
 	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(cell_temperatures_label, dataArrayStyle);
 
+	// Component status indicators
 	component_status_section = ESPUI.addControl(Separator, "Component Status (1:working, 0:disabled, -1:error/disconnected)", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
 	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
@@ -137,9 +133,8 @@ void WebUI::setupWebUI(){
 	bms_status_label = ESPUI.addControl(Label, "BMS_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
 	ESPUI.setElementStyle(bms_status_label, dataStyle);
 
-	//ESPUI.setElementStyle(ESPUI.addControl(Label, "", "", None, component_status_section), "width: 100%; background-color: unset; border: unset;");
 
-	//Sliders default to being 0 to 100, but if you want different limits you can add a Min and Max control
+	// test voltage slider
 	testVoltageSlider = ESPUI.addControl(Slider, "Test_Voltage_Slider", "3.9", Wetasphalt, maintab, my_updateObserversCallback);
 	ESPUI.addControl(Min, "", "0", None, testVoltageSlider);
 	ESPUI.addControl(Max, "", "5", None, testVoltageSlider);
@@ -160,12 +155,6 @@ void WebUI::setupWebUI(){
 
 	//Time display
 	mainTime = ESPUI.addControl(Time, "Current Time", "", Wetasphalt, maintab, my_getTimeCallback);
-
-
-	//Number inputs also accept Min and Max components, but you should still validate the values.
-	// mainNumber = ESPUI.addControl(Number, "Number Input", "42", Wetasphalt, maintab, my_generalCallback);
-	// ESPUI.addControl(Min, "", "10", None, mainNumber);
-	// ESPUI.addControl(Max, "", "50", None, mainNumber);
 
 	/*
 	* Tab: System Setup
@@ -219,7 +208,6 @@ void WebUI::setupWebUI(){
 
 
 // ========== Callbacks ==========
-
 void WebUI::getTimeCallback(Control *sender, int type) {
 	if(type == B_UP) {
 		ESPUI.updateTime(mainTime);
@@ -449,7 +437,7 @@ void WebUI::connectWifi() {
 		Serial.println("\nCreating access point...");
 		WiFi.mode(WIFI_AP);
 		WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-		WiFi.softAP(wifiConfig.hostname.c_str()); //append device ID to hotspot name to make it identifiable
+		WiFi.softAP(wifiConfig.hostname.c_str(), wifiConfig.password.c_str()); //append device ID to hotspot name to make it identifiable
 
 		connect_timeout = 20;
 		do {

@@ -45,7 +45,6 @@ void ConfigManager::loadConfig(const char* filename) {
     // Populate config structs from JSON
     wifiConfig.hostname = doc["wifi_config"]["hostname"].as<String>();
     wifiConfig.force_use_hotspot = doc["wifi_config"]["force_use_hotspot"].as<bool>();
-    wifiConfig.ssid = doc["wifi_config"]["ssid"].as<String>();
     wifiConfig.password = doc["wifi_config"]["password"].as<String>();
 
     mqttConfig.broker = doc["mqtt_config"]["broker"].as<String>();
@@ -114,8 +113,6 @@ void ConfigManager::printConfig() {
     Serial.println(wifiConfig.hostname);
     Serial.print("Force Use Hotspot: ");
     Serial.println(wifiConfig.force_use_hotspot);
-    Serial.print("SSID: ");
-    Serial.println(wifiConfig.ssid);
     Serial.print("Password: ");
     Serial.println(wifiConfig.password);
 
@@ -151,7 +148,6 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     JsonDocument doc;
     doc["wifi_config"]["hostname"] = wifiConfig.hostname;
     doc["wifi_config"]["force_use_hotspot"] = wifiConfig.force_use_hotspot;
-    doc["wifi_config"]["ssid"] = wifiConfig.ssid;
     doc["wifi_config"]["password"] = wifiConfig.password;
 
     doc["mqtt_config"]["broker"] = mqttConfig.broker;
