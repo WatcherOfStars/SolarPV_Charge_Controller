@@ -2,8 +2,7 @@
     "wifi_config":{
         "hostname": "solar_pv",
         "force_use_hotspot": false,
-        "ssid": "plantphone",
-        "password": "growing23"
+        "password": "solarpv123"
 
     },
 
