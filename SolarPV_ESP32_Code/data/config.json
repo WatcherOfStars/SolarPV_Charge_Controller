@@ -25,6 +25,7 @@
         "min_cell_voltage": 3.2,
         "safety_cell_voltage": 3.0,
         "cell_voltage_hysteresis": 0.1,
+        "cell_balance_start": 3.9,
         "max_cell_temperature": 60.0,
         "min_cell_temperature": -20.0,
         "load_shunt_resistance": 0.000172,
@@ -45,7 +46,10 @@
         "wire_sda_pin": 21,
         "restart_pin": 2,
         "solar_fet_pin": 17,
+        "solar_safety_fet_pin": 27,
         "load_fet_pin": 16,
-        "fan_pin": 4
+        "fan_pin": 4,
+        "thermistor_pin": 36,
+        "boot_LED_pin": 26
     }
 }

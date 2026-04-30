@@ -29,6 +29,7 @@ struct DeviceConfig {
     float min_cell_voltage;
     float safety_cell_voltage;
     float cell_voltage_hysteresis;
+    float cell_balance_start;
     float max_cell_temperature;
     float min_cell_temperature;
     float max_pack_voltage;
@@ -51,8 +52,11 @@ struct DeviceConfig {
     int wire_sda_pin;
     int restart_pin;
     int solar_fet_pin;
+    int solar_safety_fet_pin;
     int load_fet_pin;
     int fan_pin;
+    int thermistor_pin;
+    int boot_LED_pin;
 };
 
 

@@ -11,7 +11,6 @@
 
 
 // Create global objects
-SystemManager sys; // Create System object
 BrokerManager broker; // Create BrokerManager object
 WebUI webUI; // Create WebUI object
 MqttClientManager client; // Create ClientManager object

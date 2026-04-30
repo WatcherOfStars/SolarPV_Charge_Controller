@@ -64,6 +64,7 @@ void ConfigManager::loadConfig(const char* filename) {
     deviceConfig.min_cell_voltage = doc["device_config"]["min_cell_voltage"].as<float>();
     deviceConfig.safety_cell_voltage = doc["device_config"]["safety_cell_voltage"].as<float>();
     deviceConfig.cell_voltage_hysteresis = doc["device_config"]["cell_voltage_hysteresis"].as<float>();
+    deviceConfig.cell_balance_start = doc["device_config"]["cell_balance_start"].as<float>();
     deviceConfig.max_cell_temperature = doc["device_config"]["max_cell_temperature"].as<float>();
     deviceConfig.min_cell_temperature = doc["device_config"]["min_cell_temperature"].as<float>();
     
@@ -101,8 +102,11 @@ void ConfigManager::loadConfig(const char* filename) {
 
     deviceConfig.restart_pin = doc["device_config"]["restart_pin"].as<int>();
     deviceConfig.solar_fet_pin = doc["device_config"]["solar_fet_pin"].as<int>();
+    deviceConfig.solar_safety_fet_pin = doc["device_config"]["solar_safety_fet_pin"].as<int>();
     deviceConfig.load_fet_pin = doc["device_config"]["load_fet_pin"].as<int>();
     deviceConfig.fan_pin = doc["device_config"]["fan_pin"].as<int>();
+    deviceConfig.thermistor_pin = doc["device_config"]["thermistor_pin"].as<int>();
+    deviceConfig.boot_LED_pin = doc["device_config"]["boot_LED_pin"].as<int>();
 }
 
 void ConfigManager::printConfig() {
@@ -165,6 +169,9 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["num_cells"] = deviceConfig.num_cells;
     doc["device_config"]["max_cell_voltage"] = deviceConfig.max_cell_voltage;
     doc["device_config"]["min_cell_voltage"] = deviceConfig.min_cell_voltage;
+    doc["device_config"]["safety_cell_voltage"] = deviceConfig.safety_cell_voltage;
+    doc["device_config"]["cell_voltage_hysteresis"] = deviceConfig.cell_voltage_hysteresis;
+    doc["device_config"]["cell_balance_start"] = deviceConfig.cell_balance_start;
     doc["device_config"]["max_cell_temperature"] = deviceConfig.max_cell_temperature;
     doc["device_config"]["min_cell_temperature"] = deviceConfig.min_cell_temperature;
 
@@ -187,8 +194,11 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["wire_sda_pin"] = deviceConfig.wire_sda_pin;
     doc["device_config"]["restart_pin"] = deviceConfig.restart_pin;
     doc["device_config"]["solar_fet_pin"] = deviceConfig.solar_fet_pin;
+    doc["device_config"]["solar_safety_fet_pin"] = deviceConfig.solar_safety_fet_pin;
     doc["device_config"]["load_fet_pin"] = deviceConfig.load_fet_pin;
     doc["device_config"]["fan_pin"] = deviceConfig.fan_pin;
+    doc["device_config"]["thermistor_pin"] = deviceConfig.thermistor_pin;
+    doc["device_config"]["boot_LED_pin"] = deviceConfig.boot_LED_pin;
 
     // Serialize JSON to string and write to file
     File configFile = LittleFS.open(filename, "w");

@@ -14,6 +14,7 @@ byte cfr[6]; // config read register
 byte writecfr[6]; // config write register
 byte cv[13]; // calculated cell voltage register
 
+byte maxdcc = 0; // max discharge value based on number of cells
 byte dcc = 0; // discharge cell tribble
 byte mci = 0; // mask cell interrupts
 byte vuv = 125; // undervoltage config flag
@@ -32,6 +33,8 @@ static int BMS_CS; // chip select pin for LTC6802, set in config
 int setupLTC6802() {
   device = ConfigManager::getInstance().deviceConfig;
   BMS_CS = device.bms_cs_pin;
+
+  maxdcc = (1 << device.num_cells) - 1; // calculate max discharge value based on number of cells
 
   //start SPI
   SPI.begin(device.bms_clk_pin, device.bms_miso_pin, device.bms_mosi_pin);
@@ -316,4 +319,31 @@ int updateLTC6802() {
   Serial.println();
   //printDecodedConfigView();
   return 1; // Return success code
+}
+
+void pullDownBalance(float *cellVoltages, float *packAverage){
+  // pulls down high cells
+  for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
+    float bufferedCellVoltage = cellVoltages[cell] - 0.02; // add small buffer to prevent rapid toggling
+    if (bufferedCellVoltage > *packAverage && cellVoltages[cell] > device.cell_balance_start){ // if cell is above average and above balance start threshold
+      dcc |= (1 << cell); // set bit for this cell to pull down
+    }
+    else if (cellVoltages[cell] <= *packAverage){ // if cell is at or below average, stop pulling down
+      dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
+    }
+  }
+}
+void pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
+  // pulls up low cells
+  for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
+    if (cell != *minCellIndex && cellVoltages[cell] > device.cell_balance_start){ // if cell is above balance start threshold and not the minimum cell
+      dcc |= (1 << cell); // set bit for this cell to pull down
+    }
+    else{
+      dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
+    }
+  }
+}
+void stopBalance(){
+  dcc = 0; // clear all bits to stop balancing
 }

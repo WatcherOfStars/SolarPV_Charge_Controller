@@ -6,6 +6,7 @@
 #include <RTClib.h>
 #include "config.h"
 
+SystemManager sys; // Create System object
 
 struct Sys_Flags {
     unsigned int ENABLE_BMS : 1;
@@ -60,10 +61,10 @@ private:
     int setupLoadINA(); //to be called to setup Load INA
 
     // status
-    static int solarInaStatus; // status of Solar INA setup (0 = not attempted, -1 = failed, 1 = successful)
-    static int loadInaStatus; // status of Load INA setup (0 = not attempted, -1 = failed, 1 = successful)
-    static int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
-    static int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
+    static volatile int solarInaStatus; // status of Solar INA setup (0 = not attempted, -1 = failed, 1 = successful)
+    static volatile int loadInaStatus; // status of Load INA setup (0 = not attempted, -1 = failed, 1 = successful)
+    static volatile int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
+    static volatile int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
 
     
 

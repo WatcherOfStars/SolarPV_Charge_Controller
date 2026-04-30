@@ -13,6 +13,9 @@ void displayLTC6802Config();
 void startLTC6802Conversion(const uint8_t command);
 void readLTC6802(const uint8_t command, const uint8_t numBytes, uint8_t* buffer);
 float* getCellVoltages();
+void pullDownBalance(float *cellVoltages, float *packAverage);
+void pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex);
+void stopBalance();
 
 namespace constants {
 

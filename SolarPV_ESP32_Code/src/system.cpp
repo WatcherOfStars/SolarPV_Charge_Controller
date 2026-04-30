@@ -44,10 +44,10 @@ SystemData SystemManager::systemData  = {
     },
     error: 0
 };
-int SystemManager::solarInaStatus = 0;
-int SystemManager::loadInaStatus = 0;
-int SystemManager::rtcStatus = 0;
-int SystemManager::bmsStatus = 0;
+volatile int SystemManager::solarInaStatus = 0;
+volatile int SystemManager::loadInaStatus = 0;
+volatile int SystemManager::rtcStatus = 0;
+volatile int SystemManager::bmsStatus = 0;
 
 INA226 solarIna(0x40); // Create an INA226 object for the solar INA with the default I2C address
 INA226 loadIna(0x41); // Create an INA226 object for the load INA with a different I2C address
@@ -57,11 +57,19 @@ float webUITimer = 0; // timer to track when to send updates to the web UI (e.g.
 bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
 
 DeviceConfig deviceConfig;
+hw_timer_t * balanceTimer = NULL;
 
 
 void SystemManager::setupSystem() {
     // get consts from config
     deviceConfig = ConfigManager::getInstance().deviceConfig;
+
+    //set up blance timer to tigger every 10 seconds (10000 ms)
+    balanceTimer = timerBegin(0, 80, true); // timer 0, prescaler 80 (1 us per tick), count up
+    timerAttachInterrupt(balanceTimer, &onBalanceTimer, true);
+    timerAlarmWrite(balanceTimer, 10000000, true); // 10 seconds
+    timerAlarmEnable(balanceTimer);
+    Serial.println("Balance timer set up to trigger every 10 seconds.");
 
     // Initialize I2C
     Wire.begin(); 
@@ -542,6 +550,30 @@ void SystemManager::loadFETControl(bool state){
 void SystemManager::fanControl(bool state){
     if(sys_flags.ENABLE_FAN == 0) state=false; // Turn off if fan control is disabled by flags
     ledcWrite(0, state ? (deviceConfig.fan_duty_cycle * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
+}
+
+void IRAM_ATTR onBalanceTimer() {
+    // This function will be called when the balance timer expires. Implement balancing logic here.
+    Serial.println("Balance timer triggered, balancing cells");
+    if(sys.bmsStatus == 1){
+        BattData batt = sys.systemData.batt;
+        if(sys.rtcStatus == 1) {
+            // if even day, pull down high cells
+            if(sys.systemData.rtcTime.day() % 2 == 0) {
+                pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
+            }
+            // if odd day, pull up low cells
+            else {
+                pullUpBalance(batt.cellVoltages, &batt.averageCellVoltage, &batt.minCellIndex);
+            }
+        }
+        else {
+            // RTC is disabled/unavailable, so avoid using default or stale day values.
+            // Fall back to a deterministic balancing strategy that does not depend on time.
+            pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
+        }
+    }
+    
 }
 
 void SystemManager::onNotify(const char* topic, const char* message) {
