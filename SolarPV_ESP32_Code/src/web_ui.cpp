@@ -105,12 +105,21 @@ void WebUI::setupWebUI(){
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Time:", None, system_data_section), labelStyle);
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(rtc_time_label, dataArrayStyle);
+
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Current:", None, system_data_section), labelStyle);
 	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(solar_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Voltage:", None, system_data_section), labelStyle);
+	solar_shunt_voltage_label = ESPUI.addControl(Label, "Solar_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(solar_shunt_voltage_label, dataStyle);
+
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Current:", None, system_data_section), labelStyle);
 	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(load_current_label, dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Voltage:", None, system_data_section), labelStyle);
+	load_shunt_voltage_label = ESPUI.addControl(Label, "Load_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(load_shunt_voltage_label, dataStyle);
+
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Voltages:", None, system_data_section), labelStyle);
 	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(cell_voltages_label, dataArrayStyle);
@@ -536,6 +545,8 @@ void WebUI::onNotify(const char* topic, const char* message) {
 		if (!doc["RTC_Time"].isNull()) ESPUI.updateLabel(rtc_time_label, doc["RTC_Time"]);
 		if (!doc["Solar_Shunt_Current"].isNull()) ESPUI.updateLabel(solar_current_label, doc["Solar_Shunt_Current"]);
 		if (!doc["Load_Shunt_Current"].isNull()) ESPUI.updateLabel(load_current_label, doc["Load_Shunt_Current"]);
+		if (!doc["Solar_Shunt_Voltage"].isNull()) ESPUI.updateLabel(solar_shunt_voltage_label, doc["Solar_Shunt_Voltage"]);
+		if (!doc["Load_Shunt_Voltage"].isNull()) ESPUI.updateLabel(load_shunt_voltage_label, doc["Load_Shunt_Voltage"]);
 		String cellVoltagesText;
 		String cellTemperaturesText;
 		if (doc["Cell_Voltages"].is<JsonArray>() || doc["Cell_Voltages"].is<JsonVariantConst>()) {

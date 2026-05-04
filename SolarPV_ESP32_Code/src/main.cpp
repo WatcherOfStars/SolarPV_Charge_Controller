@@ -26,6 +26,11 @@ void mainEventHandler::onNotify(const char* topic, const char* message) {
 
 mainEventHandler eventHandler; // Create main event handler object
 
+hw_timer_t * balanceTimer = NULL;
+volatile bool balanceTimerFired = false;
+
+void IRAM_ATTR onBalanceTimer();
+
 void setup(){
   // Start serial communication for debugging
   Serial.begin(115200);
@@ -38,6 +43,12 @@ void setup(){
   
 	if(ConfigManager::getInstance().deviceConfig.slow_boot) delay(5000); //Delay booting to give time to connect a serial monitor
 
+  //set up blance timer to tigger every 10 seconds (10000 ms)
+  balanceTimer = timerBegin(0, 80, true); // timer 0, prescaler 80 (1 us per tick), count up
+  timerAttachInterrupt(balanceTimer, &onBalanceTimer, true);
+  timerAlarmWrite(balanceTimer, 10000000, true); // 10 seconds
+  timerAlarmEnable(balanceTimer);
+  Serial.println("Balance timer set up to trigger every 10 seconds.");
 
   // Setup system
   Serial.println("Setting up system...");
@@ -74,6 +85,12 @@ void setup(){
 static long unsigned lastTime = 0;
 
 void loop() {
+
+  //##### BALANCE CELLS (deferred from ISR) #####
+  if(balanceTimerFired) {
+    balanceTimerFired = false;
+    sys.balanceCells();
+  }
 
   //##### UPDATE SYSTEM #####
 	if(millis() > lastTime + 2000) {
@@ -120,6 +137,8 @@ void loop() {
   delay(10); //Small delay to prevent watchdog timer reset
 }
 
-
+void IRAM_ATTR onBalanceTimer(){ //balance cells every 10s
+  balanceTimerFired = true; // set flag; actual work is done in loop() to avoid ISR-unsafe calls
+}
 
 

@@ -13,12 +13,12 @@ using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
     ENABLE_BMS: 1, 
-    ENABLE_RTC: 0, 
+    ENABLE_RTC: 1, 
     ENABLE_SOLAR_FETs: 1, 
     ENABLE_LOAD_FETs: 1,
-    ENABLE_FAN: 0, 
-    ENABLE_SOLAR_INA: 0, 
-    ENABLE_LOAD_INA: 0,
+    ENABLE_FAN: 1, 
+    ENABLE_SOLAR_INA: 1, 
+    ENABLE_LOAD_INA: 1,
     ENABLE_FAKE_BATTERY: 0, // enable fake battery data for testing without BMS
 };
 SystemData SystemManager::systemData  = {
@@ -57,22 +57,15 @@ float webUITimer = 0; // timer to track when to send updates to the web UI (e.g.
 bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
 
 DeviceConfig deviceConfig;
-hw_timer_t * balanceTimer = NULL;
+
 
 
 void SystemManager::setupSystem() {
     // get consts from config
     deviceConfig = ConfigManager::getInstance().deviceConfig;
 
-    //set up blance timer to tigger every 10 seconds (10000 ms)
-    balanceTimer = timerBegin(0, 80, true); // timer 0, prescaler 80 (1 us per tick), count up
-    timerAttachInterrupt(balanceTimer, &onBalanceTimer, true);
-    timerAlarmWrite(balanceTimer, 10000000, true); // 10 seconds
-    timerAlarmEnable(balanceTimer);
-    Serial.println("Balance timer set up to trigger every 10 seconds.");
-
     // Initialize I2C
-    Wire.begin(); 
+    Wire.begin(deviceConfig.wire_sda_pin, deviceConfig.wire_scl_pin); 
 
     // Setup pins
     pinMode(deviceConfig.restart_pin, OUTPUT);
@@ -509,6 +502,14 @@ int SystemManager::performSafetyChecks(){
         return 5; // return error code for cell voltage below safety threshold
     }
 
+    // Check if BMS connected using read
+    uint8_t temp_cfr[6];
+    if(sys_flags.ENABLE_BMS && bmsStatus == 1 && readLTC6802(0x02, 6, temp_cfr) == -1) { // if BMS is enabled and was previously working but now read fails, assume communication failure
+        Serial.println("BMS communication failure detected!");
+        bmsStatus = -1; // update BMS status to indicate failure
+        return 6; // return error code for BMS communication failure
+    }
+
     // // Check BMS communication
     // if(sys_flags.ENABLE_BMS && bmsStatus != 1) {
     //     Serial.println("BMS communication failure detected!");
@@ -552,14 +553,14 @@ void SystemManager::fanControl(bool state){
     ledcWrite(0, state ? (deviceConfig.fan_duty_cycle * 255) : 0); // Set fan speed to max duty cycle (1=255) or off (0) using PWM
 }
 
-void IRAM_ATTR onBalanceTimer() {
+void SystemManager::balanceCells() {
     // This function will be called when the balance timer expires. Implement balancing logic here.
     Serial.println("Balance timer triggered, balancing cells");
-    if(sys.bmsStatus == 1){
-        BattData batt = sys.systemData.batt;
-        if(sys.rtcStatus == 1) {
+    if(bmsStatus == 1){
+        BattData batt = systemData.batt;
+        if(rtcStatus == 1) {
             // if even day, pull down high cells
-            if(sys.systemData.rtcTime.day() % 2 == 0) {
+            if(systemData.rtcTime.day() % 2 == 0) {
                 pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
             }
             // if odd day, pull up low cells
@@ -705,7 +706,9 @@ void SystemManager::sendUpdatesToWebUI(){
     dataDoc["Toggle_Fan"] = fanStatus();
 
     dataDoc["Solar_Shunt_Current"] = systemData.solarShuntCurrent;
+    dataDoc["Solar_Shunt_Voltage"] = systemData.solarShuntVoltage;
     dataDoc["Load_Shunt_Current"] = systemData.loadShuntCurrent;
+    dataDoc["Load_Shunt_Voltage"] = systemData.loadShuntVoltage;
     dataDoc["RTC_Time"] = systemData.rtcTime.timestamp();
 
     // BMS cell voltages

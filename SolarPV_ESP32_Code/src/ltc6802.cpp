@@ -48,12 +48,15 @@ int setupLTC6802() {
   writeLTCConfig();
 
   //return fail code (-1) if config readback doesn't match what was written
-  readLTC6802(0x02, 6, tmp); // read config registers into tmp buffer
+  if(readLTC6802(0x02, 6, cfr) == -1){
+    Serial.println("Failed to read back LTC6802 config registers");
+    return -1; // read config registers into tmp buffer
+  }
   for (int i=1; i<6; i++){ // exclude index 0
-    if (tmp[i] != writecfr[i]){
+    if (cfr[i] != writecfr[i]){
       Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
       Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
-      Serial.print(", got ");      Serial.println(tmp[i], HEX);
+      Serial.print(", got ");      Serial.println(cfr[i], HEX);
       return -1;
     }
   }
@@ -183,14 +186,23 @@ void startLTC6802Conversion(const uint8_t cmd)
 
 }
 
-void readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const arr)
+int readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const arr)
 {
   // reads values from specified register into provided array. Will retry if communication error.
+  // Returns -1 if timeout occurs, 1 on success
   Serial.print("Reading command: 0x");
   Serial.println(cmd, HEX);
 
+  unsigned long startTime = millis();
+  const unsigned long timeout = 1000; // 1 second timeout
+
   do
   {
+    if (millis() - startTime >= timeout) {
+      Serial.println("ERROR: readLTC6802 timeout");
+      return -1;
+    }
+
     SPI.beginTransaction(spiSettings);
     digitalWrite(BMS_CS, LOW);
 
@@ -198,22 +210,17 @@ void readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const
     
     for (int i = 0; i < numOfRegisters; ++i) // Read the specified number of registers into the provided array
     {
-      arr[i] = SPI.transfer(cmd); // should this be 0x00 instead of cmd?
+      arr[i] = SPI.transfer(0x00); // Read register data
     }
     (void)SPI.transfer(cmd); // Read and intentionally discard PEC byte
 
     digitalWrite(BMS_CS, HIGH);
     SPI.endTransaction();
 
-    // for (int i = 0; i < numOfRegisters; ++i) // Print the read values for debugging
-    // {
-    //   Serial.print(" 0x");
-    //   Serial.print(arr[i], HEX);
-    // }
-    //Serial.println();
-
   }
   while (arr[0] == 0xff); // Retry if the first byte is 0xFF, which may indicate a communication error
+
+  return 1; // Success
 }
 
 void displayLTC6802Config()
@@ -293,10 +300,10 @@ int updateLTC6802() {
   //config register reading
   readLTC6802(0x02, 6, cfr); //read config registers
   for (int i=1; i<6; i++){ // exclude index 0
-    if (tmp[i] != writecfr[i]){
+    if (cfr[i] != writecfr[i]){
       Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
       Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
-      Serial.print(", got ");      Serial.println(tmp[i], HEX);
+      Serial.print(", got ");      Serial.println(cfr[i], HEX);
       return -1;
     }
   }
@@ -332,6 +339,8 @@ void pullDownBalance(float *cellVoltages, float *packAverage){
       dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
     }
   }
+  Serial.print("DCC after pull down balance: ");
+  Serial.println(dcc, BIN);
 }
 void pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
   // pulls up low cells
@@ -343,6 +352,8 @@ void pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
       dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
     }
   }
+  Serial.print("DCC after pull up balance: ");
+  Serial.println(dcc, BIN);
 }
 void stopBalance(){
   dcc = 0; // clear all bits to stop balancing

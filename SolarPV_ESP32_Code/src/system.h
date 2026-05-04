@@ -6,7 +6,6 @@
 #include <RTClib.h>
 #include "config.h"
 
-SystemManager sys; // Create System object
 
 struct Sys_Flags {
     unsigned int ENABLE_BMS : 1;
@@ -49,10 +48,7 @@ struct SystemData {
 class SystemManager : public observer, public subject {
 private:
     std::vector<observer*> observers; //list of observers
-    // Set sys_flags
-    static Sys_Flags sys_flags; // system flags to control which components are active
 
-    static SystemData systemData; // struct to hold system data for easy access and updates
     
     int setupBMS(); //to be called to setup BMS
     int updateBMS(); //to be called to update BMS
@@ -60,15 +56,22 @@ private:
     int setupSolarINA(); //to be called to setup Solar INA
     int setupLoadINA(); //to be called to setup Load INA
 
-    // status
+
+
+    
+
+public:
+    // Set sys_flags
+    static Sys_Flags sys_flags; // system flags to control which components are active
+
+    static SystemData systemData; // struct to hold system data for easy access and updates
+
+        // status
     static volatile int solarInaStatus; // status of Solar INA setup (0 = not attempted, -1 = failed, 1 = successful)
     static volatile int loadInaStatus; // status of Load INA setup (0 = not attempted, -1 = failed, 1 = successful)
     static volatile int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
     static volatile int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
 
-    
-
-public:
     void setupSystem(); //to be called in setup
     void updateSystem(); // to be called in loop
 
@@ -85,6 +88,7 @@ public:
     int getRTCData(); //to be called to get RTC data
     int getBMSData(); //to be called to get BMS data
     int performSafetyChecks(); //to be called to perform safety checks
+    void balanceCells(); //to be called to balance battery cells
     void solarFETControl(bool state); //to control solar FETs
     void loadFETControl(bool state); //to control load FETs
     void fanControl(bool state); //to control cooling fan

@@ -14,6 +14,7 @@
 BrokerManager broker; // Create BrokerManager object
 WebUI webUI; // Create WebUI object
 MqttClientManager client; // Create ClientManager object
+SystemManager sys; // Create SystemManager object
 
 
 
