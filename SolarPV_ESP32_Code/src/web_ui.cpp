@@ -85,8 +85,8 @@ void WebUI::setupWebUI(){
 	enable_bms_switcher = ESPUI.addControl(Switcher, "Enable_BMS", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable RTC:", None, system_flags_section), labelStyle);
 	enable_rtc_switcher = ESPUI.addControl(Switcher, "Enable_RTC", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar INA:", None, system_flags_section), labelStyle);
-	enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
+	// ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar INA:", None, system_flags_section), labelStyle);
+	// enable_solar_ina_switcher = ESPUI.addControl(Switcher, "Enable_Solar_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Load INA:", None, system_flags_section), labelStyle);
 	enable_load_ina_switcher = ESPUI.addControl(Switcher, "Enable_Load_INA", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Solar FETs:", None, system_flags_section), labelStyle);
@@ -106,12 +106,12 @@ void WebUI::setupWebUI(){
 	rtc_time_label = ESPUI.addControl(Label, "RTC_Time", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(rtc_time_label, dataArrayStyle);
 
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Current:", None, system_data_section), labelStyle);
-	solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(solar_current_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Voltage:", None, system_data_section), labelStyle);
-	solar_shunt_voltage_label = ESPUI.addControl(Label, "Solar_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(solar_shunt_voltage_label, dataStyle);
+	// ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Current:", None, system_data_section), labelStyle);
+	// solar_current_label = ESPUI.addControl(Label, "Solar_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
+	// ESPUI.setElementStyle(solar_current_label, dataStyle);
+	// ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Voltage:", None, system_data_section), labelStyle);
+	// solar_shunt_voltage_label = ESPUI.addControl(Label, "Solar_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
+	// ESPUI.setElementStyle(solar_shunt_voltage_label, dataStyle);
 
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Current:", None, system_data_section), labelStyle);
 	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
@@ -129,9 +129,9 @@ void WebUI::setupWebUI(){
 
 	// Component status indicators
 	component_status_section = ESPUI.addControl(Separator, "Component Status (1:working, 0:disabled, -1:error/disconnected)", "", None, maintab);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
-	solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
-	ESPUI.setElementStyle(solar_shunt_status_label, dataStyle);
+	// ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Solar Shunt Status:", None, component_status_section), labelStyle);
+	// solar_shunt_status_label = ESPUI.addControl(Label, "Solar_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
+	// ESPUI.setElementStyle(solar_shunt_status_label, dataStyle);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Status:", None, component_status_section), labelStyle);
 	load_shunt_status_label = ESPUI.addControl(Label, "Load_Shunt_Status", "-", Wetasphalt, component_status_section, my_generalCallback);
 	ESPUI.setElementStyle(load_shunt_status_label, dataStyle);

@@ -12,13 +12,13 @@ using namespace constants;
 using namespace std;
 
 Sys_Flags SystemManager::sys_flags = { 
-    ENABLE_BMS: 1, 
-    ENABLE_RTC: 1, 
-    ENABLE_SOLAR_FETs: 1, 
-    ENABLE_LOAD_FETs: 1,
-    ENABLE_FAN: 1, 
-    ENABLE_SOLAR_INA: 1, 
-    ENABLE_LOAD_INA: 1,
+    ENABLE_BMS: 0, 
+    ENABLE_RTC: 0, 
+    ENABLE_SOLAR_FETs: 0, 
+    ENABLE_LOAD_FETs: 0,
+    ENABLE_FAN: 0, 
+    ENABLE_SOLAR_INA: 0, 
+    ENABLE_LOAD_INA: 0,
     ENABLE_FAKE_BATTERY: 0, // enable fake battery data for testing without BMS
 };
 SystemData SystemManager::systemData  = {
@@ -49,8 +49,8 @@ volatile int SystemManager::loadInaStatus = 0;
 volatile int SystemManager::rtcStatus = 0;
 volatile int SystemManager::bmsStatus = 0;
 
-INA226 solarIna(0x40); // Create an INA226 object for the solar INA with the default I2C address
-INA226 loadIna(0x41); // Create an INA226 object for the load INA with a different I2C address
+INA226 solarIna(0x40, &Wire); // Create an INA226 object for the solar INA with the default I2C address
+INA226 loadIna(0x41, &Wire); // Create an INA226 object for the load INA with a different I2C address
 RTC_DS3231 rtc; // create clock object
 
 float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
@@ -59,17 +59,19 @@ bool firstUpdate = true; // flag to indicate if this is the first update (used t
 DeviceConfig deviceConfig;
 
 
-
 void SystemManager::setupSystem() {
     // get consts from config
     deviceConfig = ConfigManager::getInstance().deviceConfig;
 
-    // Initialize I2C
+    // Initialize I2C (one is swapped due to pcb design)
     Wire.begin(deviceConfig.wire_sda_pin, deviceConfig.wire_scl_pin); 
+    Wire1.begin(deviceConfig.wire_scl_pin, deviceConfig.wire_sda_pin); 
+
 
     // Setup pins
     pinMode(deviceConfig.restart_pin, OUTPUT);
     pinMode(deviceConfig.solar_fet_pin, OUTPUT);
+    pinMode(deviceConfig.solar_safety_fet_pin, OUTPUT);
     pinMode(deviceConfig.load_fet_pin, OUTPUT);
     pinMode(deviceConfig.fan_pin, OUTPUT);
 
@@ -77,10 +79,12 @@ void SystemManager::setupSystem() {
     ledcAttachPin(deviceConfig.fan_pin, 0); // Attach the fan control pin to the PWM channel
 
     digitalWrite(deviceConfig.restart_pin, HIGH); // write high to prevent shutdown until a restart is triggered
-
+    solarFETControl(false);
+    loadFETControl(false);
+    digitalWrite(deviceConfig.solar_safety_fet_pin, HIGH); // close safety fets- they will only be opened when an error occurs
     
     // Setup (-1 error, 0 not attempted, 1 success)
-    solarInaStatus = setupSolarINA();
+    // solarInaStatus = setupSolarINA(); DISABLED DUE TO HARDWARE ISSUE (low impedance path between battery and solar grounds, causes magic smoke)
     loadInaStatus = setupLoadINA();
     rtcStatus = setupRTC();
     bmsStatus = setupBMS();
@@ -88,7 +92,7 @@ void SystemManager::setupSystem() {
     systemData.batt.isCharging = false; // default to not charging, will be updated when BMS data is read
     systemData.batt.isDischarging = false; // default to not discharging, will be updated when BMS data is read
 
-    std::cout << "System setup complete. Solar INA status: " << solarInaStatus << ", Load INA status: " << loadInaStatus << ", RTC status: " << rtcStatus << ", BMS status: " << bmsStatus << std::endl;
+    std::cout << "System setup complete. Load INA status: " << loadInaStatus << ", RTC status: " << rtcStatus << ", BMS status: " << bmsStatus << std::endl;
 
 
     // Configure rtc
@@ -119,7 +123,7 @@ int SystemManager::setupRTC() {
     }
 
     // Check for real time clock
-    if (! rtc.begin()) {
+    if (! rtc.begin(&Wire1)) {
         Serial.println("Couldn't find RTC");
         return -1; // Return an error code if RTC is not found
     }
@@ -184,12 +188,12 @@ void SystemManager::updateSystem() {
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
     checkInitWithFlags();
-    Serial.println("Status flags: Solar INA: " + String(solarInaStatus) + ", Load INA: " + String(loadInaStatus) + ", RTC: " + String(rtcStatus) + ", BMS: " + String(bmsStatus));
+    Serial.println("Status flags: Load INA: " + String(loadInaStatus) + ", RTC: " + String(rtcStatus) + ", BMS: " + String(bmsStatus));
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
     // get data from solar INA226
-    if(solarInaStatus == 1) getSolarShuntData();
+    // if(solarInaStatus == 1) getSolarShuntData();
 
     // get data from load INA226 
     if(loadInaStatus == 1) getLoadShuntData();
@@ -363,15 +367,12 @@ void SystemManager::checkInitWithFlags()
 int SystemManager::getSolarShuntData(){
     // Read values from INA226 (may require calibration)
     systemData.solarShuntVoltage = solarIna.getShuntVoltage_mV();
-    systemData.solarShuntCurrent = solarIna.getCurrent_mA();
+    //systemData.solarShuntCurrent = solarIna.getCurrent_mA();
+    systemData.solarShuntCurrent = systemData.solarShuntVoltage / deviceConfig.solar_shunt_resistance;
     systemData.solarPowerUse = systemData.solarShuntCurrent * systemData.solarShuntVoltage / 1000; // in mW
 
     // Serial.print("Shunt Voltage: ");
     // Serial.print(systemData.solarShuntVoltage);
-    // Serial.println(" mV");
-
-    // Serial.print("Shunt Voltage: ");
-    // Serial.print(systemData.loadShuntVoltage);
     // Serial.println(" mV");
 
     // Serial.print("Current: ");
@@ -388,20 +389,21 @@ int SystemManager::getSolarShuntData(){
 int SystemManager::getLoadShuntData(){
     // Read values from INA226 (may require calibration)
     systemData.loadShuntVoltage = loadIna.getShuntVoltage_mV();
-    systemData.loadShuntCurrent = loadIna.getCurrent_mA();
+    //systemData.loadShuntCurrent = loadIna.getCurrent_mA();
+    systemData.loadShuntCurrent = systemData.loadShuntVoltage / deviceConfig.load_shunt_resistance;
     systemData.loadPowerUse = systemData.loadShuntCurrent * systemData.loadShuntVoltage / 1000; // in mW
 
-    // Serial.print("Shunt Voltage: ");
-    // Serial.print(systemData.loadShuntVoltage);
-    // Serial.println(" mV");
+    Serial.print("Load Shunt Voltage: ");
+    Serial.print(systemData.loadShuntVoltage);
+    Serial.println(" mV");
 
     // Serial.print("Shunt Voltage: ");
     // Serial.print(systemData.loadShuntVoltage);
     // Serial.println(" mV");
 
-    // Serial.print("Current: ");
-    // Serial.print(systemData.loadShuntCurrent);
-    // Serial.println(" mA");
+    Serial.print("Load Current: ");
+    Serial.print(systemData.loadShuntCurrent);
+    Serial.println(" mA");
 
     // Serial.print("Power: ");
     // Serial.print(systemData.loadPowerUse);
@@ -460,7 +462,6 @@ int SystemManager::performSafetyChecks(){
     // 1: Overcurrent detected
     // 2: Solar FET failure detected
     // 3: Load FET failure detected
-    // 4: Panel disconnect detected
     // 5: Cell voltage below safety threshold detected
     // 6: BMS communication failure detected
     // 7: RTC communication failure detected
@@ -475,28 +476,32 @@ int SystemManager::performSafetyChecks(){
     }
 
     // Check for FET failures
-    // Solar should be disconnected but current is still flowing
-    if(!systemData.batt.isCharging && systemData.solarShuntCurrent > deviceConfig.max_current * 0.1 && solarInaStatus == 1) { // if solar FETs should be off but current is above 10% of max, assume FETs failed closed
-        Serial.println("Solar FET failure detected! Current: " + String(systemData.solarShuntCurrent) + " mA");
-        // TODO: add second layer of FETs
-        return 2; // return error code for solar FET failure
+    // // Solar should be disconnected but current is still flowing - DISABLED DUE TO HARDWARE ISSUE (low impedance path between battery and solar grounds, causes magic smoke)
+    // if(!systemData.batt.isCharging && systemData.solarShuntCurrent > deviceConfig.max_current * 0.1 && solarInaStatus == 1) { // if solar FETs should be off but current is above 10% of max, assume FETs failed closed
+    //     Serial.println("Solar FET failure detected! Current: " + String(systemData.solarShuntCurrent) + " mA");
+    //     // TODO: add second layer of FETs
+    //     //return 2; // return error code for solar FET failure
+    // }
+
+    // Check for battery overcharge
+    if(systemData.batt.maxCellVoltage > deviceConfig.max_cell_voltage + 0.1 && (bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY)) { 
+        Serial.println("Battery overcharge detected! Max cell voltage: " + String(systemData.batt.maxCellVoltage) + " V. Cutting power from panels.");
+        solarFETControl(false); // cut power from panels
+        digitalWrite(deviceConfig.solar_safety_fet_pin, LOW); // open safety fets to disconnect battery from solar input in case solar FETs failed closed
+        return 2; // return error code for battery overcharge
     }
+
     // Battery should be disconnected but current is still flowing
     if(!systemData.batt.isDischarging && systemData.loadShuntCurrent > deviceConfig.max_current * 0.1 && loadInaStatus == 1) { // if load FETs should be off but current is above 10% of max, assume FETs failed closed
         Serial.println("Load FET failure detected! Current: " + String(systemData.loadShuntCurrent) + " mA");
         // TODO: add second layer of FETs
-        return 3; // return error code for load FET failure
-    }
-    // Solar should be connected but no current is flowing
-    if(systemData.batt.isCharging && systemData.solarShuntCurrent < deviceConfig.max_current * 0.1 && solarInaStatus == 1) { // if solar FETs should be on but current is below 10% of max, assume FETs failed open or panel disconnected
-        Serial.println("Solar FET failure or panel disconnect detected! Current: " + String(systemData.solarShuntCurrent) + " mA");
-        loadFETControl(false); // cut power to loads to prevent battery drain
-        return 4; // return error code for solar FET failure or panel disconnect
+        //return 3; // return error code for load FET failure
     }
 
-    // Check if battery voltages are within safe limits
+    // Check for battery below safety voltage
     if(systemData.batt.minCellVoltage < deviceConfig.safety_cell_voltage && (bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY)) {
         Serial.println("Cell below safety voltage, shutting down " + String(systemData.batt.minCellIndex) + "! Cell voltage: " + String(systemData.batt.minCellVoltage) + " V. Shutting off loads.");
+        loadFETControl(false); // cut power to loads
         digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
         delay(1000);
         return 5; // return error code for cell voltage below safety threshold
