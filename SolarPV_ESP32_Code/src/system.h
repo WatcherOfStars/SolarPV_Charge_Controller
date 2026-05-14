@@ -19,13 +19,14 @@ struct Sys_Flags {
 };
 
 struct BattData {
-    float cellVoltages[6]; // Assuming a 6-cell battery pack
-    float cellTemperatures[6]; // Temperature for each cell
+    float cellVoltages[12]; // Assuming a 6-cell battery pack
+    float cellTemperatures[12]; // Temperature for each cell
     float maxCellVoltage; // Maximum cell voltage in the pack
     float minCellVoltage; // Minimum cell voltage in the pack
     int maxCellIndex; // Index of the cell with the maximum voltage
     int minCellIndex; // Index of the cell with the minimum voltage
     float averageCellVoltage; // Average cell voltage across the pack
+    String cellDischarge; // String for displaying cell discharge
     //float stateOfCharge; // State of charge percentage for the battery pack
     //float stateOfHealth; // State of health percentage for the battery pack
     bool isCharging; // Whether the battery is currently charging
@@ -35,8 +36,8 @@ struct BattData {
 struct SystemData {
     float solarShuntVoltage; // Shunt voltage in mV
     float loadShuntVoltage; // Shunt voltage in mV
-    float solarShuntCurrent; // Current in A
-    float loadShuntCurrent; // Current in A
+    float solarShuntCurrent; // Current in mA
+    float loadShuntCurrent; // Current in mA
     float solarPowerUse; // Power in mW
     float loadPowerUse; // Power in mW
     DateTime rtcTime; // current time from RTC
@@ -75,7 +76,7 @@ public:
     void setupSystem(); //to be called in setup
     void updateSystem(); // to be called in loop
 
-    void checkInitWithFlags();
+    void reconnectSensors();
 
     void sendUpdatesToWebUI(); //to be called to send updates to the web UI
 

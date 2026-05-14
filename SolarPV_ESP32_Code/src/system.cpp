@@ -30,13 +30,14 @@ SystemData SystemManager::systemData  = {
     loadPowerUse: 0.00,
     rtcTime: DateTime(2025, 1, 1, 0, 0, 0), // default time (to be updated when RTC is read)
     batt: {
-        cellVoltages: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
-        cellTemperatures: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        cellVoltages: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
+        cellTemperatures: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
         maxCellVoltage: 0.00,
         minCellVoltage: 0.00,
         maxCellIndex: 0,
         minCellIndex: 0,
         averageCellVoltage: 0.00,
+        cellDischarge: "",
         //stateOfCharge: 100.0,
         //stateOfHealth: 100.0,
         isCharging: false,
@@ -53,7 +54,9 @@ INA226 solarIna(0x40, &Wire); // Create an INA226 object for the solar INA with 
 INA226 loadIna(0x41, &Wire); // Create an INA226 object for the load INA with a different I2C address
 RTC_DS3231 rtc; // create clock object
 
-float webUITimer = 0; // timer to track when to send updates to the web UI (e.g., every 5 seconds)
+float webUITimer = 0; // timer to track when to send updates to the web UI
+float configSendTimer = 0;
+float reconnectSensorsTimer = 0;
 bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
 
 DeviceConfig deviceConfig;
@@ -187,8 +190,10 @@ void SystemManager::updateSystem() {
     }
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
-    checkInitWithFlags();
-    Serial.println("Status flags: Load INA: " + String(loadInaStatus) + ", RTC: " + String(rtcStatus) + ", BMS: " + String(bmsStatus));
+    if(reconnectSensorsTimer + 10000 < millis()){
+        reconnectSensors();
+        Serial.println("Sensor Status: Load INA: " + String(loadInaStatus) + ", RTC: " + String(rtcStatus) + ", BMS: " + String(bmsStatus));
+    }
 
     //##### RETRIEVE DATA #####
     Serial.println("Retrieving Data...");
@@ -201,10 +206,19 @@ void SystemManager::updateSystem() {
     // get data from RTC
     if(rtcStatus == 1) rtcStatus = getRTCData();
 
-    // get data from BMS
+    // get data from BMS and balance cells every 10 seconds
     if(bmsStatus == 1) {
-        bmsStatus = updateBMS(); // update BMS depending on even or odd day
+        updateBMS(); // update BMS depending on even or odd day
         if(!sys_flags.ENABLE_FAKE_BATTERY) getBMSData(); // only get BMS data if not using fake battery data
+
+        if(configSendTimer + 10000 < millis()){ //balance cells and send config every 10 seconds
+            configSendTimer = millis();
+            Serial.println("Balancing cells and sending config");
+            delay(200);
+            balanceCells();
+            bmsStatus = updateBMS();
+            delay(200); 
+        }
     }
 
     // manage power only if BMS working or using test data (i.e., BMS disabled)
@@ -216,7 +230,7 @@ void SystemManager::updateSystem() {
         systemData.batt.maxCellIndex = distance(systemData.batt.cellVoltages, max_element(systemData.batt.cellVoltages, systemData.batt.cellVoltages + deviceConfig.num_cells));
 
         // calculate pack average and total voltage
-        uint16_t totalVoltage = 0;
+        float totalVoltage = 0;
         for (int i = 0; i < deviceConfig.num_cells; ++i) {
             totalVoltage += systemData.batt.cellVoltages[i];
         }
@@ -230,6 +244,8 @@ void SystemManager::updateSystem() {
         Serial.print(systemData.batt.isDischarging);
         Serial.print("   Max Cell V: ");
         Serial.print(systemData.batt.maxCellVoltage);
+        Serial.print("   Avg Cell V: ");
+        Serial.print(systemData.batt.averageCellVoltage);
         Serial.print("   Min Cell V: ");
         Serial.print(systemData.batt.minCellVoltage);
         Serial.print("   Max allowed V: ");
@@ -243,17 +259,17 @@ void SystemManager::updateSystem() {
             solarFETControl(false); // cut power from panels
         } 
         // if batteries below threshold, enable charging from panels
-        else if(systemData.batt.maxCellVoltage < deviceConfig.max_cell_voltage - deviceConfig.cell_voltage_hysteresis && !systemData.batt.isCharging) {
+        if(systemData.batt.maxCellVoltage < deviceConfig.max_cell_voltage - deviceConfig.cell_voltage_hysteresis && !systemData.batt.isCharging) {
             Serial.println("Battery low, enabling power from panels. Average cell voltage: " + String(systemData.batt.averageCellVoltage) + " V");
             solarFETControl(true); // enable power from panels
         }
         // if batteries low, cut power to loads
-        else if(systemData.batt.minCellVoltage < deviceConfig.min_cell_voltage && systemData.batt.isDischarging) {
+        if(systemData.batt.minCellVoltage < deviceConfig.min_cell_voltage && systemData.batt.isDischarging) {
             Serial.println("Battery critically low, cutting power to loads. Average cell voltage: " + String(systemData.batt.averageCellVoltage) + " V");
             loadFETControl(false); // cut power to loads
         }
         // if batteries above threshold, enable power to loads
-        else if(systemData.batt.minCellVoltage > deviceConfig.min_cell_voltage + deviceConfig.cell_voltage_hysteresis && !systemData.batt.isDischarging) {
+        if(systemData.batt.minCellVoltage > deviceConfig.min_cell_voltage + deviceConfig.cell_voltage_hysteresis && !systemData.batt.isDischarging) {
             Serial.println("Battery above threshold, enabling power to loads. Average cell voltage: " + String(systemData.batt.averageCellVoltage) + " V");
             loadFETControl(true); // enable power to loads
         }
@@ -292,7 +308,7 @@ void SystemManager::updateSystem() {
     Serial.println("-----");
 }
 
-void SystemManager::checkInitWithFlags()
+void SystemManager::reconnectSensors()
 {
     if (sys_flags.ENABLE_BMS)
     {
@@ -444,7 +460,7 @@ int SystemManager::getBMSData(){
     //Serial.print("Getting BMS data...   ");
     // BMS data retrieval logic
     float* cellVoltages = getCellVoltages(); // get cell voltages from LTC6802
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < deviceConfig.num_cells; ++i) {
         // Serial.print("Cell ");        Serial.print(i);
         // Serial.print(" Voltage: ");
         // Serial.print(cellVoltages[i]);
@@ -472,6 +488,7 @@ int SystemManager::performSafetyChecks(){
     if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
         Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.loadShuntCurrent) + " mA");
         loadFETControl(false); // cut power to loads
+        notifyObservers("system_error", "Overcurrent detected! Shutting off loads.");
         return 1; // return error code for overcurrent
     }
 
@@ -488,20 +505,28 @@ int SystemManager::performSafetyChecks(){
         Serial.println("Battery overcharge detected! Max cell voltage: " + String(systemData.batt.maxCellVoltage) + " V. Cutting power from panels.");
         solarFETControl(false); // cut power from panels
         digitalWrite(deviceConfig.solar_safety_fet_pin, LOW); // open safety fets to disconnect battery from solar input in case solar FETs failed closed
+        notifyObservers("system_error", "Battery overcharge detected!");
         return 2; // return error code for battery overcharge
     }
 
     // Battery should be disconnected but current is still flowing
     if(!systemData.batt.isDischarging && systemData.loadShuntCurrent > deviceConfig.max_current * 0.1 && loadInaStatus == 1) { // if load FETs should be off but current is above 10% of max, assume FETs failed closed
         Serial.println("Load FET failure detected! Current: " + String(systemData.loadShuntCurrent) + " mA");
-        // TODO: add second layer of FETs
+        notifyObservers("system_error", "Load FET failure detected!");
         //return 3; // return error code for load FET failure
     }
 
     // Check for battery below safety voltage
     if(systemData.batt.minCellVoltage < deviceConfig.safety_cell_voltage && (bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY)) {
-        Serial.println("Cell below safety voltage, shutting down " + String(systemData.batt.minCellIndex) + "! Cell voltage: " + String(systemData.batt.minCellVoltage) + " V. Shutting off loads.");
+        Serial.println("Cell" + String(systemData.batt.minCellIndex) + "below safety voltage, shutting down!" + "Cell voltage: " + String(systemData.batt.minCellVoltage) + " V. Shutting off loads.");
+        Serial.print("CV: ");
+        for (int i = 0; i < 12; i++){
+            Serial.print(systemData.batt.cellVoltages[i]); Serial.print(", ");
+        }
+        Serial.println();
         loadFETControl(false); // cut power to loads
+        notifyObservers("system_error", "Cell below safety voltage, shutting down!");
+        delay(500);
         digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
         delay(1000);
         return 5; // return error code for cell voltage below safety threshold
@@ -512,6 +537,7 @@ int SystemManager::performSafetyChecks(){
     if(sys_flags.ENABLE_BMS && bmsStatus == 1 && readLTC6802(0x02, 6, temp_cfr) == -1) { // if BMS is enabled and was previously working but now read fails, assume communication failure
         Serial.println("BMS communication failure detected!");
         bmsStatus = -1; // update BMS status to indicate failure
+        notifyObservers("system_error", "BMS communication failure detected!");
         return 6; // return error code for BMS communication failure
     }
 
@@ -559,24 +585,15 @@ void SystemManager::fanControl(bool state){
 }
 
 void SystemManager::balanceCells() {
-    // This function will be called when the balance timer expires. Implement balancing logic here.
-    Serial.println("Balance timer triggered, balancing cells");
+    // This function will be called when the balance timer expires
     if(bmsStatus == 1){
         BattData batt = systemData.batt;
-        if(rtcStatus == 1) {
-            // if even day, pull down high cells
-            if(systemData.rtcTime.day() % 2 == 0) {
-                pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
-            }
-            // if odd day, pull up low cells
-            else {
-                pullUpBalance(batt.cellVoltages, &batt.averageCellVoltage, &batt.minCellIndex);
-            }
+
+        if(batt.minCellVoltage < batt.averageCellVoltage - 0.1){ // if a cell is very below average, pull up balance
+            systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, &batt.averageCellVoltage, &batt.minCellIndex);
         }
-        else {
-            // RTC is disabled/unavailable, so avoid using default or stale day values.
-            // Fall back to a deterministic balancing strategy that does not depend on time.
-            pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
+        else{ // else pull up balance
+            systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
         }
     }
     
@@ -718,11 +735,10 @@ void SystemManager::sendUpdatesToWebUI(){
 
     // BMS cell voltages
     JsonArray cells = dataDoc["Cell_Voltages"].to<JsonArray>();
-    for (int i = 0; i < 6; ++i) cells.add(systemData.batt.cellVoltages[i]);
+    for (int i = 0; i < deviceConfig.num_cells; ++i) cells.add(systemData.batt.cellVoltages[i]);
 
-    // BMS temperatures
-    JsonArray temps = dataDoc["Cell_Temperatures"].to<JsonArray>();
-    for (int i = 0; i < 6; ++i) temps.add(systemData.batt.cellTemperatures[i]);
+    // Cell discharge
+    dataDoc["Cell_Discharge"] = systemData.batt.cellDischarge;
 
     // Stautus of components
     dataDoc["Solar_Shunt_Status"] = solarInaStatus;

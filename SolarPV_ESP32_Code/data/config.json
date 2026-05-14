@@ -18,9 +18,9 @@
     },
 
     "device_config":{
-        "device_id": "solar_pv_001",
+        "device_id": "solar_pv_002",
         "slow_boot": false,
-        "num_cells": 6,
+        "num_cells": 12,
         "max_cell_voltage": 4.2,
         "min_cell_voltage": 3.2,
         "safety_cell_voltage": 3.0,

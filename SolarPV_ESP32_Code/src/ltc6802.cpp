@@ -15,7 +15,7 @@ byte writecfr[6]; // config write register
 byte cv[13]; // calculated cell voltage register
 
 byte maxdcc = 0; // max discharge value based on number of cells
-byte dcc = 0; // discharge cell tribble
+uint16_t dcc = 0; // discharge cell tribble
 byte mci = 0; // mask cell interrupts
 byte vuv = 125; // undervoltage config flag
 byte vov = 167; // overvoltage config flag
@@ -77,12 +77,12 @@ void writeLTCConfig() {
     writecfr[3]=(mci>>4);
     writecfr[4]=vuv;
     writecfr[5]=vov;
-    // Serial.print("Config Register to Write: ");
-    // for (int i=0; i<6; i++){
-    //     Serial.print(writecfr[i], HEX);
-    //     Serial.print(" ");
-    // }
-    //Serial.println();
+    Serial.print("Config Register to Write: ");
+    for (int i=0; i<6; i++){
+        Serial.print(writecfr[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println();
 
     SPI.beginTransaction(spiSettings);
     digitalWrite(BMS_CS, LOW); //pull CS low to start communication
@@ -190,8 +190,8 @@ int readLTC6802(const uint8_t cmd, const uint8_t numOfRegisters, uint8_t *const 
 {
   // reads values from specified register into provided array. Will retry if communication error.
   // Returns -1 if timeout occurs, 1 on success
-  Serial.print("Reading command: 0x");
-  Serial.println(cmd, HEX);
+  // Serial.print("Reading command: 0x");
+  // Serial.println(cmd, HEX);
 
   unsigned long startTime = millis();
   const unsigned long timeout = 1000; // 1 second timeout
@@ -284,7 +284,6 @@ int updateLTC6802() {
 //     Serial.println("Wrote CFR");
 //     t1 = millis();
 //   }
-  writeLTCConfig();
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading
@@ -299,14 +298,14 @@ int updateLTC6802() {
 
   //config register reading
   readLTC6802(0x02, 6, cfr); //read config registers
-  for (int i=1; i<6; i++){ // exclude index 0
-    if (cfr[i] != writecfr[i]){
-      Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
-      Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
-      Serial.print(", got ");      Serial.println(cfr[i], HEX);
-      return -1;
-    }
-  }
+  // for (int i=1; i<6; i++){ // exclude index 0
+  //   if (cfr[i] != writecfr[i]){
+  //     Serial.print("LTC6802 config readback mismatch at byte ");      Serial.print(i);
+  //     Serial.print(": expected ");      Serial.print(writecfr[i], HEX);
+  //     Serial.print(", got ");      Serial.println(cfr[i], HEX);
+  //     return -1;
+  //   }
+  // }
 
   //print results
   Serial.print("Cell Voltages: ");
@@ -318,42 +317,63 @@ int updateLTC6802() {
   //   Serial.print(tmp[i]);
   // }
 
-  Serial.print("Config Register: ");
-  for (int i=0; i<6; i++){
-    Serial.print(cfr[i], HEX);
-    Serial.print(" ");
-  }
-  Serial.println();
+  // Serial.print("Config Register: ");
+  // for (int i=0; i<6; i++){
+  //   Serial.print(cfr[i], HEX);
+  //   Serial.print(" ");
+  // }
+  // Serial.println();
   //printDecodedConfigView();
   return 1; // Return success code
 }
 
-void pullDownBalance(float *cellVoltages, float *packAverage){
+String pullDownBalance(float *cellVoltages, float *packAverage){
+  String vstr;
+  dcc = 0;
   // pulls down high cells
   for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
-    float bufferedCellVoltage = cellVoltages[cell] - 0.02; // add small buffer to prevent rapid toggling
-    if (bufferedCellVoltage > *packAverage && cellVoltages[cell] > device.cell_balance_start){ // if cell is above average and above balance start threshold
+    float bufferCV = cellVoltages[cell] - 0.02; // add small buffer to prevent rapid toggling
+    if (bufferCV > *packAverage && cellVoltages[cell] > device.cell_balance_start){ // if cell is above average and above balance start threshold
       dcc |= (1 << cell); // set bit for this cell to pull down
+      vstr += "d";
     }
     else if (cellVoltages[cell] <= *packAverage){ // if cell is at or below average, stop pulling down
-      dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
+      //dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
+      dcc &= ~(1 << cell); // clear bit for this cell to stop pulling down
+      vstr += "w";
     }
+    else vstr += "_";
+
   }
+  Serial.println();
   Serial.print("DCC after pull down balance: ");
-  Serial.println(dcc, BIN);
+  Serial.print(dcc, BIN);
+  Serial.print(";   ");
+  Serial.println(vstr);
+  return vstr;
 }
-void pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
+String pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
+  String vstr;
+  dcc = 0;
   // pulls up low cells
   for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
-    if (cell != *minCellIndex && cellVoltages[cell] > device.cell_balance_start){ // if cell is above balance start threshold and not the minimum cell
-      dcc |= (1 << cell); // set bit for this cell to pull down
+    //
+    if (cell == *minCellIndex || cellVoltages[cell] <= device.cell_balance_start){ // if cell is above balance start threshold and not the minimum cell
+      dcc &= ~(1 << cell); // set bit for this cell to pull down
+      vstr += "w";
+      //Serial.print("Cell "); Serial.print(cell); Serial.print(" pulled low. DCC: "); Serial.println(dcc, BIN);
     }
     else{
-      dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
+      dcc |= (1 << cell); // clear bit for this cell to stop pulling down
+      vstr += "d";
+      //Serial.print("Cell "); Serial.print(cell); Serial.print(" pulled high DCC: "); Serial.println(dcc, BIN);
     }
   }
   Serial.print("DCC after pull up balance: ");
-  Serial.println(dcc, BIN);
+  Serial.print(dcc, BIN);
+  Serial.print(";   ");
+  Serial.println(vstr);
+  return vstr;
 }
 void stopBalance(){
   dcc = 0; // clear all bits to stop balancing

@@ -49,7 +49,6 @@ void WebUI::setupWebUI(){
 	*-----------------------------------------------------------------------------------------------------------*/
 	auto maintab = ESPUI.addControl(Tab, "", "Main Controls");
 
-	control_buttons_section = ESPUI.addControl(Separator, "General Controls", "", None, maintab);
 
 	//Callback shortcuts
 	auto my_generalCallback = [this](Control *sender, int type) { this->generalCallback(sender, type); };
@@ -59,7 +58,19 @@ void WebUI::setupWebUI(){
 	auto my_enterWifiDetailsCallback = [this](Control *sender, int type) { this->enterWifiDetailsCallback(sender, type); };
 	auto my_updateObserversCallback = [this](Control *sender, int type) { this->updateObserversCallback(sender, type); };
 
-	//buttons
+	//CSS styles
+	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .1rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+	String dataStyle = "width: 60px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 2rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+	String dataArrayStyle = "width: 300px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 1rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
+
+	// error display
+	error_section = ESPUI.addControl(Separator, "Errors:", "", None, maintab);
+	error_label = ESPUI.addControl(Label, "Error_Label", "", Peterriver, error_section, my_generalCallback);
+	ESPUI.setElementStyle(error_label, dataArrayStyle);
+
+
+	control_buttons_section = ESPUI.addControl(Separator, "General Controls", "", None, maintab);
+	// buttons
 	//main_button = ESPUI.addControl(Button, "Testing Buttons", "Send Test Data", Wetasphalt, control_buttons_section, my_sendTestPub);
 	//ESPUI.addControl(Button, "", "Update Observers", Wetasphalt, control_buttons_section, my_updateObserversCallback);
 	//ESPUI.addControl(Button, "", "Start_Client", Wetasphalt, control_buttons_section, my_updateObserversCallback);
@@ -68,9 +79,7 @@ void WebUI::setupWebUI(){
 
 	//test_message_text = ESPUI.addControl(Text, "Test Data Text", "change me!", Wetasphalt, maintab, my_generalCallback);
 
-	// manual FET control
-	String labelStyle = "width: 60px; margin-left: .3rem; margin-right: .1rem; background-color: unset; font-size: 1rem; color: #34495e; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
-	
+	// manual FET control	
 	fet_toggle_section = ESPUI.addControl(Separator, "Manual FET Control", "", None, maintab);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Solar FETs:", None, fet_toggle_section), labelStyle);
 	toggle_solar_switcher = ESPUI.addControl(Switcher, "Toggle_Solar_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
@@ -96,9 +105,6 @@ void WebUI::setupWebUI(){
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Enable Fan:", None, system_flags_section), labelStyle);
 	enable_fan_switcher = ESPUI.addControl(Switcher, "Enable_Fan", "", Wetasphalt, system_flags_section, my_updateObserversCallback);
 
-	// display values
-	String dataStyle = "width: 60px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 2rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
-	String dataArrayStyle = "width: 300px; margin-left: .1rem; margin-right: .3rem; background-color: #34495e; font-size: 1rem; color: #bebebe; border: unset; layout: type: flex; flex_flow: row, flex_align_main: space_evenly, flex_align_track: center; align-items: center;";
 
 	// System Data
 	system_data_section = ESPUI.addControl(Separator, "System Data", "", None, maintab);
@@ -113,19 +119,35 @@ void WebUI::setupWebUI(){
 	// solar_shunt_voltage_label = ESPUI.addControl(Label, "Solar_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
 	// ESPUI.setElementStyle(solar_shunt_voltage_label, dataStyle);
 
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Current:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load mV:", None, system_data_section), labelStyle);
 	load_current_label = ESPUI.addControl(Label, "Load_Shunt_Current", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(load_current_label, dataStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt Voltage:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt V:", None, system_data_section), labelStyle);
 	load_shunt_voltage_label = ESPUI.addControl(Label, "Load_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(load_shunt_voltage_label, dataStyle);
+	ESPUI.separator("");
 
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Voltages:", None, system_data_section), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell V:", None, system_data_section), labelStyle);
 	cell_voltages_label = ESPUI.addControl(Label, "BMS_Cell_Voltages", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(cell_voltages_label, dataArrayStyle);
-	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Temps:", None, system_data_section), labelStyle);
-	cell_temperatures_label = ESPUI.addControl(Label, "BMS_Cell_Temperatures", "", Wetasphalt, system_data_section, my_generalCallback);
-	ESPUI.setElementStyle(cell_temperatures_label, dataArrayStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Cell Discharge:", None, system_data_section), labelStyle);
+	cell_discharge_label = ESPUI.addControl(Label, "BMS_Cell_Discharge", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(cell_discharge_label, dataArrayStyle);
+
+
+	// Table layout testing
+	ESPUI.addControl(Separator, "Table Layout Test", "", None, maintab);
+	auto table = ESPUI.addControl(Fragment, "Table", "", None, maintab);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Header 1", None, table), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Header 2", None, table), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Header 3", None, table), labelStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 1 Col 1", None, table), dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 1 Col 2", None, table), dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 1 Col 3", None, table), dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 2 Col 1", None, table), dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 2 Col 2", None, table), dataStyle);
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Row 2 Col 3", None, table), dataStyle);
+
 
 	// Component status indicators
 	component_status_section = ESPUI.addControl(Separator, "Component Status (1:working, 0:disabled, -1:error/disconnected)", "", None, maintab);
@@ -172,9 +194,9 @@ void WebUI::setupWebUI(){
 	auto systemSetupTab = ESPUI.addControl(Tab, "", "System Setup");
 	ESPUI.addControl(Label, "Step 1", "Disable all system flags before setup.", None, systemSetupTab);
 	ESPUI.addControl(Label, "Step 2", "Configure connection to LAN if desired using the WiFi credentials tab.", None, systemSetupTab);
-	ESPUI.addControl(Label, "Step 3", "Verify system reboots, then hold power button to restart. If WiFi credentials were changed, new IP address will be 10.16.204.165.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 3", "Verify system shuts down when shutdown button pressed, then hold restart button on board to restart. If WiFi credentials were changed, new IP address will be different (10.16.204.165).", None, systemSetupTab);
 	ESPUI.addControl(Label, "Step 4", "Enable fan in main controls tab and verify it turns on.", None, systemSetupTab);
-	ESPUI.addControl(Label, "Step 5", "Enable RTC and set time.", None, systemSetupTab);
+	ESPUI.addControl(Label, "Step 5", "Enable RTC and verify its status is 1.", None, systemSetupTab);
 	ESPUI.addControl(Label, "Step 6", "Ensure battery(-) is physically disconnected, connect solar. Enable solar in the main controls tab and verify voltage with multimeter. Then enable load and verify voltage.", None, systemSetupTab);
 	ESPUI.addControl(Label, "Step 7", "Disconnect solar and loads, disable all FETs. Connect the battery to battery(+) and battery(-) and the BMS to SPI pins. Enable the BMS in the main controls tab. Verify cell voltage and temperature readings.", None, systemSetupTab);
 	ESPUI.addControl(Label, "Step 8", "Verify cell balancing over 1 hour.", None, systemSetupTab);
@@ -553,10 +575,7 @@ void WebUI::onNotify(const char* topic, const char* message) {
 			serializeJson(doc["Cell_Voltages"], cellVoltagesText);
 			ESPUI.updateLabel(cell_voltages_label, cellVoltagesText);
 		}
-		if (doc["Cell_Temperatures"].is<JsonArray>() || doc["Cell_Temperatures"].is<JsonVariantConst>()) {
-			serializeJson(doc["Cell_Temperatures"], cellTemperaturesText);
-			ESPUI.updateLabel(cell_temperatures_label, cellTemperaturesText);
-		}
+		if (!doc["Cell_Discharge"].isNull()) ESPUI.updateLabel(cell_discharge_label, doc["Cell_Discharge"]);
 		if (!doc["Solar_Shunt_Status"].isNull()) ESPUI.updateLabel(solar_shunt_status_label, doc["Solar_Shunt_Status"]);
 		if (!doc["Load_Shunt_Status"].isNull()) ESPUI.updateLabel(load_shunt_status_label, doc["Load_Shunt_Status"]);
 		if (!doc["RTC_Status"].isNull()) ESPUI.updateLabel(rtc_status_label, doc["RTC_Status"]);
@@ -588,6 +607,9 @@ void WebUI::onNotify(const char* topic, const char* message) {
 		if (!doc["Enable_Solar_FETs"].isNull()) ESPUI.updateSwitcher(enable_solar_switcher, doc["Enable_Solar_FETs"]);
 		if (!doc["Enable_Load_FETs"].isNull()) ESPUI.updateSwitcher(enable_load_switcher, doc["Enable_Load_FETs"]);
 		if (!doc["Enable_Fan"].isNull()) ESPUI.updateSwitcher(enable_fan_switcher, doc["Enable_Fan"]);
+	}
+	if (strcmp(topic, "system_error") == 0) {
+		ESPUI.updateLabel(error_label, message);
 	}
 }
 

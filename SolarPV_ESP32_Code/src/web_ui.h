@@ -48,13 +48,13 @@ private:
     //system flag switches
     uint16_t enable_bms_switcher, enable_rtc_switcher, enable_solar_ina_switcher, enable_load_ina_switcher, enable_solar_switcher, enable_load_switcher, enable_fan_switcher;
     //values
-    uint16_t rtc_time_label, solar_current_label, solar_shunt_voltage_label, load_current_label, load_shunt_voltage_label, cell_voltages_label, cell_temperatures_label;
+    uint16_t rtc_time_label, solar_current_label, solar_shunt_voltage_label, load_current_label, load_shunt_voltage_label, cell_voltages_label, cell_discharge_label;
     //status labels
     uint16_t solar_shunt_status_label, load_shunt_status_label, rtc_status_label, bms_status_label, dns_status_label;
     //divider sections
     uint16_t control_buttons_section, fet_toggle_section, system_flags_section, system_data_section, component_status_section;
     //other
-    uint16_t test_message_text, mainTime, testVoltageSlider;
+    uint16_t test_message_text, mainTime, testVoltageSlider, error_section, error_label;
 
     // prototypes
     void generalCallback(Control *sender, int type);
