@@ -1,16 +1,19 @@
 from paho.mqtt import client as mqtt_client
 import json
 import time
+import csv
+import os
 
-broker = '192.168.4.1'
-port = 9000
+broker = '192.168.1.1'
+port = 1883
 topic_pub = "pub_test"
-topic_sub = "sub_test"
+topic_sub = "solar_pv/data"
 # generate client ID with pub prefix randomly
 client_id = 'py_client'
 username = 'solarpv'
 password = 'solarpv123'
 deviceId = "37"
+csv_file = "mqtt_data.csv"
 
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
@@ -40,8 +43,12 @@ def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
         #print(f"Recieved '{msg.payload.decode()}' from '{msg.topic}' topic")
         y = json.loads(msg.payload.decode())
-        print("val:", y["val"])
-
+        print("Recieved:", y)
+        with open(csv_file, mode='a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=y.keys(), delimiter=';')
+            if(os.stat(csv_file).st_size == 0):
+                writer.writeheader()
+            writer.writerow(y)
 
 
     client.subscribe(topic_sub)
@@ -52,14 +59,10 @@ def main():
     subscribe(client)
 
 
-    pub_time = 5
     last_time = time.time()
     while True:
         client.loop()
-        if(time.time() > last_time + pub_time):
-            print("publishing")
-            publish(client, "GOOD")
-            last_time = time.time()
+        
         
 
 if __name__ == '__main__':

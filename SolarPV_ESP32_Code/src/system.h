@@ -26,6 +26,7 @@ struct BattData {
     int maxCellIndex; // Index of the cell with the maximum voltage
     int minCellIndex; // Index of the cell with the minimum voltage
     float averageCellVoltage; // Average cell voltage across the pack
+    float packVoltage;
     String cellDischarge; // String for displaying cell discharge
     //float stateOfCharge; // State of charge percentage for the battery pack
     //float stateOfHealth; // State of health percentage for the battery pack
@@ -72,6 +73,7 @@ public:
     static volatile int loadInaStatus; // status of Load INA setup (0 = not attempted, -1 = failed, 1 = successful)
     static volatile int rtcStatus; // status of RTC setup (0 = not attempted, -1 = failed, 1 = successful)
     static volatile int bmsStatus; // status of BMS setup (0 = not attempted, -1 = failed, 1 = successful)
+    static volatile int loadStatus; // status of load: 1 is operational, 0 is disconnected, -1 is overcurrent
 
     void setupSystem(); //to be called in setup
     void updateSystem(); // to be called in loop

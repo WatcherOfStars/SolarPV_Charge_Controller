@@ -17,6 +17,7 @@ private:
     std::vector<observer*> observers; //list of observers
 
 public:
+    bool is_client_setup = false;
     void setupClient(); //to be called in setup
     ESP32MQTTClient* getClient(); //returns reference to the internal client object
 
@@ -25,6 +26,7 @@ public:
     void registerObserver(observer* obs) override;
     void removeObserver(observer* obs) override;
     void notifyObservers(const char* topic, const char* message) override;
+
 };
 
 #endif

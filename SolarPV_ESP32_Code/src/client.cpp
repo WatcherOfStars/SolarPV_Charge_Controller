@@ -22,10 +22,10 @@ void MqttClientManager::setupClient(){ //Client &set_client
     mqttClient.enableDebuggingMessages();
     mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str()); // set client name to something unique using the MAC address
 
-    std::cout << "Connecting to MQTT broker at " << mqttConfig.broker << std::endl;
-    std::cout << "Using username: " << mqttConfig.username << std::endl;
-    std::cout << "Using password: " << mqttConfig.password << std::endl;
-    std::cout << "Using client name: " << mqttClient.getClientName() << std::endl;
+    Serial.print("Connecting to broker at "); Serial.print(mqttConfig.broker); 
+    Serial.print("; username: "); Serial.print(mqttConfig.username); 
+    Serial.print("; password: "); Serial.print(mqttConfig.password);
+    Serial.print("; client name: "); Serial.println(mqttClient.getClientName());
 
     mqttClient.setURI(mqttConfig.broker.c_str(), mqttConfig.username.c_str(), mqttConfig.password.c_str()); // set broker address and credentials
     mqttClient.enableLastWillMessage("lwt", "I am going offline");
@@ -38,6 +38,7 @@ void MqttClientManager::setupClient(){ //Client &set_client
     });
 
     mqttClient.loopStart();
+    is_client_setup = true;
 }
 
 ESP32MQTTClient* MqttClientManager::getClient(){

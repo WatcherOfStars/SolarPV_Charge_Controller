@@ -279,11 +279,12 @@ int updateLTC6802() {
   }
 
   //write config register every 2 seconds TODO add contidion for pull up or down
-//   if(millis() - t1 >= 2000){
-//     writeLTCConfig();
-//     Serial.println("Wrote CFR");
-//     t1 = millis();
-//   }
+  // if(millis() - t1 >= 2000){
+  //   writeLTCConfig();
+  //   Serial.println("Wrote CFR");
+  //   t1 = millis();
+  // }
+  writeLTCConfig();
 
   Serial.println("Reading SPI Registers...");
   // voltage conversion and reading

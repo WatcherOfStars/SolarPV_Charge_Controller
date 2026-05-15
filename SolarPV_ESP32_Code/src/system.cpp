@@ -49,6 +49,7 @@ volatile int SystemManager::solarInaStatus = 0;
 volatile int SystemManager::loadInaStatus = 0;
 volatile int SystemManager::rtcStatus = 0;
 volatile int SystemManager::bmsStatus = 0;
+volatile int SystemManager::loadStatus = 0;
 
 INA226 solarIna(0x40, &Wire); // Create an INA226 object for the solar INA with the default I2C address
 INA226 loadIna(0x41, &Wire); // Create an INA226 object for the load INA with a different I2C address
@@ -186,7 +187,6 @@ void SystemManager::updateSystem() {
     if(systemData.error != 0) {
         Serial.println("Safety check failed with error code: " + String(systemData.error) + ". Taking appropriate action.");
         // take appropriate action based on error code (e.g., shut down system, send alert, etc.)
-        return; // exit updateSystem early
     }
 
     //##### START OR STOP FUNCTIONS BASED ON FLAGS #####
@@ -214,10 +214,10 @@ void SystemManager::updateSystem() {
         if(configSendTimer + 10000 < millis()){ //balance cells and send config every 10 seconds
             configSendTimer = millis();
             Serial.println("Balancing cells and sending config");
-            delay(200);
+            //delay(200);
             balanceCells();
-            bmsStatus = updateBMS();
-            delay(200); 
+            //bmsStatus = updateBMS();
+            //delay(200); 
         }
     }
 
@@ -234,6 +234,7 @@ void SystemManager::updateSystem() {
         for (int i = 0; i < deviceConfig.num_cells; ++i) {
             totalVoltage += systemData.batt.cellVoltages[i];
         }
+        systemData.batt.packVoltage = totalVoltage;
         systemData.batt.averageCellVoltage = totalVoltage / deviceConfig.num_cells;
         
         //##### POWER MANAGEMENT #####
@@ -404,26 +405,22 @@ int SystemManager::getSolarShuntData(){
 // Gets the voltage, current, and power from the INA226
 int SystemManager::getLoadShuntData(){
     // Read values from INA226 (may require calibration)
-    systemData.loadShuntVoltage = loadIna.getShuntVoltage_mV();
+    systemData.loadShuntVoltage = loadIna.getShuntVoltage_mV() / 1000;
     //systemData.loadShuntCurrent = loadIna.getCurrent_mA();
     systemData.loadShuntCurrent = systemData.loadShuntVoltage / deviceConfig.load_shunt_resistance;
-    systemData.loadPowerUse = systemData.loadShuntCurrent * systemData.loadShuntVoltage / 1000; // in mW
+    systemData.loadPowerUse = systemData.loadShuntCurrent * systemData.loadShuntVoltage; // in W
 
     Serial.print("Load Shunt Voltage: ");
     Serial.print(systemData.loadShuntVoltage);
-    Serial.println(" mV");
-
-    // Serial.print("Shunt Voltage: ");
-    // Serial.print(systemData.loadShuntVoltage);
-    // Serial.println(" mV");
+    Serial.println(" V");
 
     Serial.print("Load Current: ");
     Serial.print(systemData.loadShuntCurrent);
-    Serial.println(" mA");
+    Serial.println(" A");
 
-    // Serial.print("Power: ");
-    // Serial.print(systemData.loadPowerUse);
-    // Serial.println(" mW");
+    Serial.print("Power: ");
+    Serial.print(systemData.loadPowerUse);
+    Serial.println(" W");
     return 1;
 }
 
@@ -487,6 +484,7 @@ int SystemManager::performSafetyChecks(){
     // Check overcurrent
     if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
         Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.loadShuntCurrent) + " mA");
+        loadStatus = -1;
         loadFETControl(false); // cut power to loads
         notifyObservers("system_error", "Overcurrent detected! Shutting off loads.");
         return 1; // return error code for overcurrent
@@ -574,6 +572,11 @@ void SystemManager::solarFETControl(bool state){
 }
 
 void SystemManager::loadFETControl(bool state){
+    if(loadStatus == -1){
+        notifyObservers("system_error", "Overcurrent detected! Shutting off loads.");
+        state = false;
+    }
+    else loadStatus = state;
     if(sys_flags.ENABLE_LOAD_FETs == 0) state=false; // Turn off if load FET control is disabled by flags
     digitalWrite(deviceConfig.load_fet_pin, state ? HIGH : LOW);
     systemData.batt.isDischarging = state; // update discharging status based on load FET state
@@ -695,9 +698,15 @@ void SystemManager::onNotify(const char* topic, const char* message) {
         std::cout << "Handling Test_Voltage_Slider with message: " << message << std::endl;
         // set each cell voltage to the slider value for testing ONLY if enables and BMS disabled
         float testVoltage = atof(message); // convert message to float
-        for (int i = 0; i < 6; ++i) {
-            systemData.batt.cellVoltages[i] = testVoltage;
+        for (int i = 0; i < deviceConfig.num_cells; ++i) {
+            systemData.batt.cellVoltages[i] = testVoltage / 1000;
         }
+    }
+
+    else if (strcmp(topic, "Enable_Fake_Battery") == 0) {
+        std::cout << "Handling Enable_Fake_Battery with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0 && !sys_flags.ENABLE_BMS) sys_flags.ENABLE_FAKE_BATTERY = true;
+        else if (strcmp(message, "0") == 0) sys_flags.ENABLE_FAKE_BATTERY = false;
     }
 }
 
@@ -711,14 +720,18 @@ void SystemManager::sendUpdatesToWebUI(){
     flagsDoc["Enable_Fan"] = (int)sys_flags.ENABLE_FAN;
     flagsDoc["Enable_Solar_INA"] = (int)sys_flags.ENABLE_SOLAR_INA;
     flagsDoc["Enable_Load_INA"] = (int)sys_flags.ENABLE_LOAD_INA;
+    flagsDoc["Enable_Fake_Battery"] = sys_flags.ENABLE_FAKE_BATTERY;
+
     std::string flagsOut;
     serializeJson(flagsDoc, flagsOut);
     notifyObservers("system_update/flags", flagsOut.c_str());
 
     // Build JSON for data using ArduinoJson
     JsonDocument dataDoc;
+    dataDoc["Device_ID"] = deviceConfig.device_id;
     dataDoc["Toggle_Solar_FETs"] = digitalRead(deviceConfig.solar_fet_pin);
     dataDoc["Toggle_Load_FETs"] = digitalRead(deviceConfig.load_fet_pin);
+    dataDoc["Toggle_Fan"] = digitalRead(deviceConfig.fan_pin);
 
     auto fanStatus = []() -> int {
         int pwmValue = ledcRead(0); // Read the current PWM value for the fan on channel 0
@@ -729,22 +742,33 @@ void SystemManager::sendUpdatesToWebUI(){
 
     dataDoc["Solar_Shunt_Current"] = systemData.solarShuntCurrent;
     dataDoc["Solar_Shunt_Voltage"] = systemData.solarShuntVoltage;
+    dataDoc["Solar_Shunt_Power"] = systemData.solarPowerUse;
     dataDoc["Load_Shunt_Current"] = systemData.loadShuntCurrent;
     dataDoc["Load_Shunt_Voltage"] = systemData.loadShuntVoltage;
+    dataDoc["Load_Shunt_Power"] = systemData.loadPowerUse;
     dataDoc["RTC_Time"] = systemData.rtcTime.timestamp();
 
-    // BMS cell voltages
+    // Battery data
     JsonArray cells = dataDoc["Cell_Voltages"].to<JsonArray>();
     for (int i = 0; i < deviceConfig.num_cells; ++i) cells.add(systemData.batt.cellVoltages[i]);
-
-    // Cell discharge
+    dataDoc["Max_Cell_V"] = systemData.batt.maxCellVoltage;
+    dataDoc["Max_Cell"] = systemData.batt.maxCellIndex;
+    dataDoc["Min_Cell_V"] = systemData.batt.minCellVoltage;
+    dataDoc["Min_Cell"] = systemData.batt.minCellIndex;
+    dataDoc["Pack_Avrg"] = systemData.batt.averageCellVoltage;
+    dataDoc["Pack_V"] = systemData.batt.packVoltage;
     dataDoc["Cell_Discharge"] = systemData.batt.cellDischarge;
+    dataDoc["Is_Charging"] = systemData.batt.isCharging;
+    dataDoc["Is_Discharging"] = systemData.batt.isDischarging;
 
     // Stautus of components
+    dataDoc["Error"] = systemData.error;
     dataDoc["Solar_Shunt_Status"] = solarInaStatus;
     dataDoc["Load_Shunt_Status"] = loadInaStatus;
     dataDoc["RTC_Status"] = rtcStatus;
     dataDoc["BMS_Status"] = bmsStatus;
+    dataDoc["Loads_Status"] = loadStatus;
+
 
     std::string dataOut;
     serializeJson(dataDoc, dataOut);
