@@ -41,6 +41,7 @@ struct DeviceConfig {
     float thermistor_series_resistor;
     float thermistor_nominal_resistance;
     float thermistor_nominal_temperature;
+    float max_board_temperature;
     float fan_on_temperature;
     float fan_off_temperature;
     float low_battery_threshold;

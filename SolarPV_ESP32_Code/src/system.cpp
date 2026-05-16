@@ -60,6 +60,7 @@ float webUITimer = 0; // timer to track when to send updates to the web UI
 float configSendTimer = 0;
 float reconnectSensorsTimer = 0;
 bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
+bool boardOverTemperature = false; // flag to track if board is currently in an over-temperature state
 
 DeviceConfig deviceConfig;
 
@@ -226,7 +227,7 @@ void SystemManager::updateSystem() {
     }
 
     // manage power only if BMS working or using test data (i.e., BMS disabled)
-    if(bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY) {
+    if((bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY) && !boardOverTemperature) {
         // calculate min/max cell voltages and indexes
         systemData.batt.minCellVoltage = *min_element(systemData.batt.cellVoltages, systemData.batt.cellVoltages + deviceConfig.num_cells);
         systemData.batt.maxCellVoltage = *max_element(systemData.batt.cellVoltages, systemData.batt.cellVoltages + deviceConfig.num_cells);
@@ -461,13 +462,13 @@ int SystemManager::getBoardTemperature(){
     systemData.boardTemperature = steinhart - 273.15; // Convert to Celsius
     
     // Debug print statements
-    Serial.print("Thermistor ADC: ");
-    Serial.print(adcValue);
-    Serial.print(" Resistance: ");
-    Serial.print(resistance);
-    Serial.print(" Ohms, Temperature: ");
-    Serial.print(systemData.boardTemperature);
-    Serial.println(" °C");
+    // Serial.print("Thermistor ADC: ");
+    // Serial.print(adcValue);
+    // Serial.print(" Resistance: ");
+    // Serial.print(resistance);
+    // Serial.print(" Ohms, Temperature: ");
+    // Serial.print(systemData.boardTemperature);
+    // Serial.println(" °C");
 
     return 1;
 }
@@ -505,6 +506,21 @@ int SystemManager::performSafetyChecks(){
     // 6: RTC communication failure detected
     // 7: Solar INA226 communication failure detected
     // 8: Load INA226 communication failure detected
+    // 9: Board overtemperature detected
+
+    // Check temperatures
+    if(systemData.boardTemperature > deviceConfig.max_board_temperature) {
+        Serial.println("Board overtemperature detected! Temperature: " + String(systemData.boardTemperature) + " °C. Shutting off loads.");
+        loadFETControl(false); // cut power to loads
+        solarFETControl(false); // cut power from panels
+        boardOverTemperature = true; // set overtemperature flag
+        notifyObservers("system_error", "Board overtemperature detected!");
+        return 9; // return error code for board overtemperature
+    }
+    else if (boardOverTemperature && systemData.boardTemperature < deviceConfig.max_board_temperature - 5) {
+        Serial.println("Board temperature back to normal. Temperature: " + String(systemData.boardTemperature) + " °C. Resuming normal operation.");
+        boardOverTemperature = false; // reset overtemperature flag
+    }
 
     // Check overcurrent
     if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
@@ -567,20 +583,20 @@ int SystemManager::performSafetyChecks(){
     // Check RTC communication
     if(sys_flags.ENABLE_RTC && rtcStatus != 1) {
         Serial.println("RTC communication failure detected!");
-        return 7; // return error code for RTC communication failure
+        return 6; // return error code for RTC communication failure
     }
-
     // Check INA226 communication
-    if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
-        Serial.println("Solar INA communication failure detected!");
-        return 8; // return error code for solar INA communication failure
-    }
+    // if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
+    //     Serial.println("Solar INA communication failure detected!");
+    //     return 7; // return error code for solar INA communication failure
+    // }
     if(sys_flags.ENABLE_LOAD_INA && loadInaStatus != 1) {
         Serial.println("Load INA communication failure detected!");
-        return 9; // return error code for load INA communication failure
+        return 8; // return error code for load INA communication failure
     }
-    // Check temperatures
-    // Check component statuses for disconnects or faults
+
+
+
     return 0;
 }
 
@@ -611,12 +627,14 @@ void SystemManager::balanceCells() {
     if(bmsStatus == 1){
         BattData batt = systemData.batt;
 
-        if(batt.minCellVoltage < batt.averageCellVoltage - 0.1){ // if a cell is very below average, pull up balance
-            systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, &batt.averageCellVoltage, &batt.minCellIndex);
-        }
-        else{ // else pull up balance
-            systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, &batt.averageCellVoltage);
-        }
+        // if(batt.minCellVoltage < batt.averageCellVoltage - 0.1){ // if a cell is very below average, pull up balance
+        //     systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, batt.averageCellVoltage, batt.minCellIndex);
+        // }
+        // else{ // else pull down balance
+        //     systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
+        // }
+        systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
+
     }
     
 }

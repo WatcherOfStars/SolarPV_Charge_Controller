@@ -87,6 +87,7 @@ void ConfigManager::loadConfig(const char* filename) {
     deviceConfig.thermistor_series_resistor = doc["device_config"]["thermistor_series_resistor"].as<float>();
     deviceConfig.thermistor_nominal_resistance = doc["device_config"]["thermistor_nominal_resistance"].as<float>();
     deviceConfig.thermistor_nominal_temperature = doc["device_config"]["thermistor_nominal_temperature"].as<float>();
+    deviceConfig.max_board_temperature = doc["device_config"]["max_board_temperature"].as<float>(); 
 
     deviceConfig.fan_on_temperature = doc["device_config"]["fan_on_temperature"].as<float>();
     deviceConfig.fan_off_temperature = doc["device_config"]["fan_off_temperature"].as<float>();
@@ -188,6 +189,7 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["thermistor_series_resistor"] = deviceConfig.thermistor_series_resistor;
     doc["device_config"]["thermistor_nominal_resistance"] = deviceConfig.thermistor_nominal_resistance;
     doc["device_config"]["thermistor_nominal_temperature"] = deviceConfig.thermistor_nominal_temperature;
+    doc["device_config"]["max_board_temperature"] = deviceConfig.max_board_temperature;
 
     doc["device_config"]["fan_on_temperature"] = deviceConfig.fan_on_temperature;
     doc["device_config"]["fan_off_temperature"] = deviceConfig.fan_off_temperature;

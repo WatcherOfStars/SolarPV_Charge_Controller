@@ -328,17 +328,19 @@ int updateLTC6802() {
   return 1; // Return success code
 }
 
-String pullDownBalance(float *cellVoltages, float *packAverage){
+String pullDownBalance(float *cellVoltages, float packAverage){
   String vstr;
   dcc = 0;
+  Serial.print("Pack average: ");
+  Serial.println(packAverage);
   // pulls down high cells
   for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
     float bufferCV = cellVoltages[cell] - 0.02; // add small buffer to prevent rapid toggling
-    if (bufferCV > *packAverage && cellVoltages[cell] > device.cell_balance_start){ // if cell is above average and above balance start threshold
+    if (bufferCV > packAverage && cellVoltages[cell] > device.cell_balance_start){ // if cell is above average and above balance start threshold
       dcc |= (1 << cell); // set bit for this cell to pull down
       vstr += "d";
     }
-    else if (cellVoltages[cell] <= *packAverage){ // if cell is at or below average, stop pulling down
+    else if (cellVoltages[cell] <= packAverage){ // if cell is at or below average, stop pulling down
       //dcc &= maxdcc - (1 << cell); // clear bit for this cell to stop pulling down
       dcc &= ~(1 << cell); // clear bit for this cell to stop pulling down
       vstr += "w";
@@ -353,13 +355,15 @@ String pullDownBalance(float *cellVoltages, float *packAverage){
   Serial.println(vstr);
   return vstr;
 }
-String pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex){
+String pullUpBalance(float *cellVoltages, float packAverage, int minCellIndex){
   String vstr;
   dcc = 0;
+  Serial.print("Pack average: ");
+  Serial.println(packAverage);
   // pulls up low cells
   for (int cell = 0; cell < device.num_cells; cell++){ // for each cell
     //
-    if (cell == *minCellIndex || cellVoltages[cell] <= device.cell_balance_start){ // if cell is above balance start threshold and not the minimum cell
+    if (cell == minCellIndex || cellVoltages[cell] <= device.cell_balance_start){ // if cell is above balance start threshold and not the minimum cell
       dcc &= ~(1 << cell); // set bit for this cell to pull down
       vstr += "w";
       //Serial.print("Cell "); Serial.print(cell); Serial.print(" pulled low. DCC: "); Serial.println(dcc, BIN);

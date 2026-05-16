@@ -1,13 +1,13 @@
 {
     "wifi_config":{
         "hostname": "solar_pv_test",
-        "force_use_hotspot": true,
+        "force_use_hotspot": false,
         "password": "solarpv123"
 
     },
 
     "mqtt_config":{
-        "broker": "mqtt://192.168.1.1:1883",
+        "broker": "mqtt://192.168.10.98:1883",
         "port": 1883,
         "username": "solarpv",
         "password": "solarpv123",
@@ -20,7 +20,7 @@
     "device_config":{
         "device_id": "solar_pv_test",
         "slow_boot": false,
-        "num_cells": 8,
+        "num_cells": 12,
         "max_cell_voltage": 4.0,
         "min_cell_voltage": 3.2,
         "safety_cell_voltage": 3.0,
@@ -35,6 +35,7 @@
         "thermistor_series_resistor": 10000.0,
         "thermistor_nominal_resistance": 10000.0,
         "thermistor_nominal_temperature": 25.0,
+        "max_board_temperature": 65.0,
         "fan_on_temperature": 40.0,
         "fan_off_temperature": 35.0,
         "low_battery_threshold": 20.0,

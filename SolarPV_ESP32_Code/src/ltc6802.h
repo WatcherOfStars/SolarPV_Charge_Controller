@@ -13,8 +13,8 @@ void displayLTC6802Config();
 void startLTC6802Conversion(const uint8_t command);
 int readLTC6802(const uint8_t command, const uint8_t numBytes, uint8_t* buffer);
 float* getCellVoltages();
-String pullDownBalance(float *cellVoltages, float *packAverage);
-String pullUpBalance(float *cellVoltages, float *packAverage, int *minCellIndex);
+String pullDownBalance(float *cellVoltages, float packAverage);
+String pullUpBalance(float *cellVoltages, float packAverage, int minCellIndex);
 void stopBalance();
 
 namespace constants {
