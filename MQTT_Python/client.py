@@ -4,7 +4,7 @@ import time
 import csv
 import os
 
-broker = '192.168.1.1'
+broker = '10.138.0.171' #'192.168.1.1'
 port = 1883
 topic_pub = "pub_test"
 topic_sub = "solar_pv/data"

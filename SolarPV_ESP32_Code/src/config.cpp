@@ -83,6 +83,11 @@ void ConfigManager::loadConfig(const char* filename) {
     deviceConfig.load_shunt_resistance = doc["device_config"]["load_shunt_resistance"].as<float>();
     deviceConfig.max_current = doc["device_config"]["max_current"].as<float>();
 
+    deviceConfig.thermistor_beta_value = doc["device_config"]["thermistor_beta_value"].as<float>();
+    deviceConfig.thermistor_series_resistor = doc["device_config"]["thermistor_series_resistor"].as<float>();
+    deviceConfig.thermistor_nominal_resistance = doc["device_config"]["thermistor_nominal_resistance"].as<float>();
+    deviceConfig.thermistor_nominal_temperature = doc["device_config"]["thermistor_nominal_temperature"].as<float>();
+
     deviceConfig.fan_on_temperature = doc["device_config"]["fan_on_temperature"].as<float>();
     deviceConfig.fan_off_temperature = doc["device_config"]["fan_off_temperature"].as<float>();
     deviceConfig.low_battery_threshold = doc["device_config"]["low_battery_threshold"].as<float>();
@@ -178,6 +183,11 @@ void ConfigManager::writeConfig(const char* filename, const WifiConfig& wifiConf
     doc["device_config"]["load_shunt_resistance"] = deviceConfig.load_shunt_resistance;
     doc["device_config"]["solar_shunt_resistance"] = deviceConfig.solar_shunt_resistance;
     doc["device_config"]["max_current"] = deviceConfig.max_current;
+
+    doc["device_config"]["thermistor_beta_value"] = deviceConfig.thermistor_beta_value;
+    doc["device_config"]["thermistor_series_resistor"] = deviceConfig.thermistor_series_resistor;
+    doc["device_config"]["thermistor_nominal_resistance"] = deviceConfig.thermistor_nominal_resistance;
+    doc["device_config"]["thermistor_nominal_temperature"] = deviceConfig.thermistor_nominal_temperature;
 
     doc["device_config"]["fan_on_temperature"] = deviceConfig.fan_on_temperature;
     doc["device_config"]["fan_off_temperature"] = deviceConfig.fan_off_temperature;

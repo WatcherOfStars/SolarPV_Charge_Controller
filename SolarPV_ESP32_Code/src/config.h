@@ -37,6 +37,10 @@ struct DeviceConfig {
     float solar_shunt_resistance;
     float load_shunt_resistance;
     float max_current;
+    float thermistor_beta_value;
+    float thermistor_series_resistor;
+    float thermistor_nominal_resistance;
+    float thermistor_nominal_temperature;
     float fan_on_temperature;
     float fan_off_temperature;
     float low_battery_threshold;

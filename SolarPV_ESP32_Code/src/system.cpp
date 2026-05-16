@@ -28,6 +28,7 @@ SystemData SystemManager::systemData  = {
     loadShuntCurrent: 0.00,
     solarPowerUse: 0.00,
     loadPowerUse: 0.00,
+    boardTemperature: 0.00,
     rtcTime: DateTime(2025, 1, 1, 0, 0, 0), // default time (to be updated when RTC is read)
     batt: {
         cellVoltages: {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00},
@@ -206,6 +207,9 @@ void SystemManager::updateSystem() {
     // get data from RTC
     if(rtcStatus == 1) rtcStatus = getRTCData();
 
+    // get data from board thermistor
+    getBoardTemperature();
+
     // get data from BMS and balance cells every 10 seconds
     if(bmsStatus == 1) {
         updateBMS(); // update BMS depending on even or odd day
@@ -286,13 +290,6 @@ void SystemManager::updateSystem() {
     // calculate ambient temperature
     // calculate power in/out of system
     // calculate voltage drop behavior and resulting thresholds from panel voltage, battery voltage and charge, and load draw 
-
-    // arrange 2-byte cell voltage array into 3-byte calculated format
-
-    //##### SPI COMMUNICATION #####
-    // Serial.println("SPI Writing...");
-    // SPI write every 10 seconds
-
     
 
     // turn fan on or off based on temperature readings and current
@@ -447,6 +444,34 @@ int SystemManager::getRTCData(){
     return 1;
 }
 
+int SystemManager::getBoardTemperature(){
+    // for the board thermistor
+    // read adc
+    int adcValue = analogRead(deviceConfig.thermistor_pin);
+    // get resistance from adc value using voltage divider formula
+    float resistance = deviceConfig.thermistor_series_resistor * (4095.0 / adcValue - 1); // Calculate thermistor resistance (4095 adc resolution)
+    // apply steinhart to get temperature
+    float steinhart;
+    steinhart = resistance / deviceConfig.thermistor_nominal_resistance;      // (R/Ro)
+    steinhart = log(steinhart);                       // ln(R/Ro)
+    steinhart /= deviceConfig.thermistor_beta_value;                       // 1/B * ln(R/Ro)
+    steinhart += 1.0 / (deviceConfig.thermistor_nominal_temperature + 273.15); // + (1/To)
+    steinhart = 1.0 / steinhart; 
+
+    systemData.boardTemperature = steinhart - 273.15; // Convert to Celsius
+    
+    // Debug print statements
+    Serial.print("Thermistor ADC: ");
+    Serial.print(adcValue);
+    Serial.print(" Resistance: ");
+    Serial.print(resistance);
+    Serial.print(" Ohms, Temperature: ");
+    Serial.print(systemData.boardTemperature);
+    Serial.println(" °C");
+
+    return 1;
+}
+
 // updates the battery management system depending if it's an even or odd day
 int SystemManager::updateBMS() {
     return updateLTC6802(); // update LTC6802 BMS
@@ -473,13 +498,13 @@ int SystemManager::performSafetyChecks(){
     // This function performs safety checks on the system and returns an error code if any issues are detected. Error codes can be defined as follows:
     // 0: No error
     // 1: Overcurrent detected
-    // 2: Solar FET failure detected
+    // 2: Battery overcharge detected
     // 3: Load FET failure detected
-    // 5: Cell voltage below safety threshold detected
-    // 6: BMS communication failure detected
-    // 7: RTC communication failure detected
-    // 8: Solar INA226 communication failure detected
-    // 9: Load INA226 communication failure detected
+    // 4: Cell voltage below safety threshold detected
+    // 5: BMS communication failure detected
+    // 6: RTC communication failure detected
+    // 7: Solar INA226 communication failure detected
+    // 8: Load INA226 communication failure detected
 
     // Check overcurrent
     if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
@@ -511,7 +536,7 @@ int SystemManager::performSafetyChecks(){
     if(!systemData.batt.isDischarging && systemData.loadShuntCurrent > deviceConfig.max_current * 0.1 && loadInaStatus == 1) { // if load FETs should be off but current is above 10% of max, assume FETs failed closed
         Serial.println("Load FET failure detected! Current: " + String(systemData.loadShuntCurrent) + " mA");
         notifyObservers("system_error", "Load FET failure detected!");
-        //return 3; // return error code for load FET failure
+        return 3; // return error code for load FET failure
     }
 
     // Check for battery below safety voltage
@@ -527,7 +552,7 @@ int SystemManager::performSafetyChecks(){
         delay(500);
         digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
         delay(1000);
-        return 5; // return error code for cell voltage below safety threshold
+        return 4; // return error code for cell voltage below safety threshold
     }
 
     // Check if BMS connected using read
@@ -536,30 +561,24 @@ int SystemManager::performSafetyChecks(){
         Serial.println("BMS communication failure detected!");
         bmsStatus = -1; // update BMS status to indicate failure
         notifyObservers("system_error", "BMS communication failure detected!");
-        return 6; // return error code for BMS communication failure
+        return 5; // return error code for BMS communication failure
     }
 
-    // // Check BMS communication
-    // if(sys_flags.ENABLE_BMS && bmsStatus != 1) {
-    //     Serial.println("BMS communication failure detected!");
-    //     return 6; // return error code for BMS communication failure
-    // }
+    // Check RTC communication
+    if(sys_flags.ENABLE_RTC && rtcStatus != 1) {
+        Serial.println("RTC communication failure detected!");
+        return 7; // return error code for RTC communication failure
+    }
 
-    // // Check RTC communication
-    // if(sys_flags.ENABLE_RTC && rtcStatus != 1) {
-    //     Serial.println("RTC communication failure detected!");
-    //     return 7; // return error code for RTC communication failure
-    // }
-
-    // // Check INA226 communication
-    // if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
-    //     Serial.println("Solar INA communication failure detected!");
-    //     return 8; // return error code for solar INA communication failure
-    // }
-    // if(sys_flags.ENABLE_LOAD_INA && loadInaStatus != 1) {
-    //     Serial.println("Load INA communication failure detected!");
-    //     return 9; // return error code for load INA communication failure
-    // }
+    // Check INA226 communication
+    if(sys_flags.ENABLE_SOLAR_INA && solarInaStatus != 1) {
+        Serial.println("Solar INA communication failure detected!");
+        return 8; // return error code for solar INA communication failure
+    }
+    if(sys_flags.ENABLE_LOAD_INA && loadInaStatus != 1) {
+        Serial.println("Load INA communication failure detected!");
+        return 9; // return error code for load INA communication failure
+    }
     // Check temperatures
     // Check component statuses for disconnects or faults
     return 0;
@@ -746,6 +765,7 @@ void SystemManager::sendUpdatesToWebUI(){
     dataDoc["Load_Shunt_Current"] = systemData.loadShuntCurrent;
     dataDoc["Load_Shunt_Voltage"] = systemData.loadShuntVoltage;
     dataDoc["Load_Shunt_Power"] = systemData.loadPowerUse;
+    dataDoc["Board_Temperature"] = systemData.boardTemperature;
     dataDoc["RTC_Time"] = systemData.rtcTime.timestamp();
 
     // Battery data

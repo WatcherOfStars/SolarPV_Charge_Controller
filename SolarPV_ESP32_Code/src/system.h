@@ -41,6 +41,7 @@ struct SystemData {
     float loadShuntCurrent; // Current in mA
     float solarPowerUse; // Power in mW
     float loadPowerUse; // Power in mW
+    float boardTemperature; // Temperature in degrees Celsius
     DateTime rtcTime; // current time from RTC
     BattData batt; // Battery management system data
     int error; // error code for system errors
@@ -90,6 +91,7 @@ public:
     int getLoadShuntData(); //to be called to get shunt data
     int getRTCData(); //to be called to get RTC data
     int getBMSData(); //to be called to get BMS data
+    int getBoardTemperature(); //to be called to get thermistor data
     int performSafetyChecks(); //to be called to perform safety checks
     void balanceCells(); //to be called to balance battery cells
     void solarFETControl(bool state); //to control solar FETs

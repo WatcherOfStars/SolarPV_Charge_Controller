@@ -22,13 +22,6 @@ void WebUI::setupWebConn(){
 
 	connectWifi();
 
-	// Display the IP address of the ESP32 (MIGHT BREAK)
-	IPAddress IP = WiFi.softAPIP();
-	Serial.print("AP SSID: ");
-	Serial.println(WiFi.softAPNetworkID());
-	Serial.print("AP IP address: ");
-	Serial.println(IP);
-
 	WiFi.setSleep(false); //turn off sleeping to increase UI responsivness (at the cost of power use)
 } 
 
@@ -137,7 +130,11 @@ void WebUI::setupWebUI(){
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Load Shunt V:", None, system_data_section), labelStyle);
 	load_shunt_voltage_label = ESPUI.addControl(Label, "Load_Shunt_Voltage", "", Wetasphalt, system_data_section, my_generalCallback);
 	ESPUI.setElementStyle(load_shunt_voltage_label, dataStyle);
-	//ESPUI.separator("");
+
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Board Temperature:", None, system_data_section), labelStyle);
+	board_temperature_label = ESPUI.addControl(Label, "Board_Temperature", "", Wetasphalt, system_data_section, my_generalCallback);
+	ESPUI.setElementStyle(board_temperature_label, dataStyle);
+
 
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Pack V:", None, system_data_section), labelStyle);
 	pack_v_label = ESPUI.addControl(Label, "Pack_V", "", Wetasphalt, system_data_section, my_generalCallback);
@@ -483,6 +480,13 @@ void WebUI::connectWifi() {
 			Serial.print(",");
 			connect_timeout--;
 		} while(connect_timeout);
+
+		// Display the IP address of the ESP32
+		IPAddress IP = WiFi.softAPIP();
+		Serial.print("AP SSID: ");
+		Serial.println(WiFi.softAPNetworkID());
+		Serial.print("AP IP address: ");
+		Serial.println(IP);
 	}
 }
 
@@ -578,6 +582,7 @@ void WebUI::onNotify(const char* topic, const char* message) {
 		if (!doc["Load_Shunt_Current"].isNull()) ESPUI.updateLabel(load_current_label, doc["Load_Shunt_Current"]);
 		if (!doc["Solar_Shunt_Voltage"].isNull()) ESPUI.updateLabel(solar_shunt_voltage_label, doc["Solar_Shunt_Voltage"]);
 		if (!doc["Load_Shunt_Voltage"].isNull()) ESPUI.updateLabel(load_shunt_voltage_label, doc["Load_Shunt_Voltage"]);
+		if (!doc["Board_Temperature"].isNull()) ESPUI.updateLabel(board_temperature_label, doc["Board_Temperature"]);
 		if (!doc["Pack_V"].isNull()) ESPUI.updateLabel(pack_v_label, doc["Pack_V"]);
 		String cellVoltagesText;
 		String cellTemperaturesText;
