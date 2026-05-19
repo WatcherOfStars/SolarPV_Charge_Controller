@@ -144,6 +144,41 @@ void printCellVoltages(){
   Serial.println(cellvolts[11] * 1.5 / 1000);
 }
 
+void printCellTemperatures(){
+  // get 2 12 bit adc readings from tmp reg
+  uint16_t adc1 = tmp[0] | ((tmp[1] & 0x0F) << 8);
+  uint16_t adc2 = ((tmp[1] & 0xf0) >> 4) | (tmp[2] << 4);
+
+  // convert to celsius using stienhart equation
+  // get resistance from adc value using voltage divider formula
+  float resistance = device.thermistor_series_resistor * (4095.0 / adc1 - 1); // Calculate thermistor resistance (4095 adc resolution)
+  // apply steinhart to get temperature
+  float steinhart;
+  steinhart = resistance / device.thermistor_nominal_resistance;      // (R/Ro)
+  steinhart = log(steinhart);                       // ln(R/Ro)
+  steinhart /= device.thermistor_beta_value;                       // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (device.thermistor_nominal_temperature + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart; 
+
+  float temp1 = steinhart - 273.15; // Convert to Celsius
+  Serial.print("Temp1: ");
+  Serial.print(temp1);
+  
+  // get resistance from adc value using voltage divider formula
+  resistance = device.thermistor_series_resistor * (4095.0 / adc2 - 1); // Calculate thermistor resistance (4095 adc resolution)
+  // apply steinhart to get temperature
+  steinhart = resistance / device.thermistor_nominal_resistance;      // (R/Ro)
+  steinhart = log(steinhart);                       // ln(R/Ro)
+  steinhart /= device.thermistor_beta_value;                       // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (device.thermistor_nominal_temperature + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart; 
+
+  float temp2 = steinhart - 273.15; // Convert to Celsius
+  Serial.print(", Temp2: ");
+  Serial.println(temp2);
+
+}
+
 float* getCellVoltages() {
     static float cellVolts[12];
     word cellvolts[12];
@@ -293,9 +328,9 @@ int updateLTC6802() {
   readLTC6802(0x04, 20, cvr); //read cell voltages
 
   //temperature conversion and reading
-  // measure(0x30); //start temperature conversion (all temps)
+  // startLTC6802Conversion(0x30); //start temperature conversion (all temps)
   // delay(10); //delay to ensure conversion is complete before reading
-  // readValues(0x08, 7, tmp); //read temperatures
+  // readLTC6802(0x08, 7, tmp); //read temperatures
 
   //config register reading
   readLTC6802(0x02, 6, cfr); //read config registers
@@ -312,11 +347,8 @@ int updateLTC6802() {
   Serial.print("Cell Voltages: ");
   printCellVoltages();
 
-  // Serial.println();
-  // Serial.print("Temperature: ");
-  // for (int i=0; i<=6; i++){
-  //   Serial.print(tmp[i]);
-  // }
+  // Serial.print("Cell Temperatures: ");
+  // printCellTemperatures();
 
   // Serial.print("Config Register: ");
   // for (int i=0; i<6; i++){

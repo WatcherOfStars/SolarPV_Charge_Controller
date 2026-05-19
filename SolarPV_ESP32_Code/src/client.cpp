@@ -20,7 +20,7 @@ void MqttClientManager::setupClient(){ //Client &set_client
 
 
     mqttClient.enableDebuggingMessages();
-    mqttClient.setMqttClientName(("solarpv-client-"+WiFi.macAddress()).c_str()); // set client name to something unique using the MAC address
+    mqttClient.setMqttClientName(mqttConfig.client_id.c_str()); // set client name to something unique using the MAC address
 
     Serial.print("Connecting to broker at "); Serial.print(mqttConfig.broker); 
     Serial.print("; username: "); Serial.print(mqttConfig.username); 

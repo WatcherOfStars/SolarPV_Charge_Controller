@@ -61,6 +61,8 @@ float configSendTimer = 0;
 float reconnectSensorsTimer = 0;
 bool firstUpdate = true; // flag to indicate if this is the first update (used to send initial data to web UI immediately on startup)
 bool boardOverTemperature = false; // flag to track if board is currently in an over-temperature state
+int numSafetyVoltageRechecks = 0;
+int maxSafetyVoltageRechecks = 3; // maximum number of times to recheck voltages after a safety check failure before taking action
 
 DeviceConfig deviceConfig;
 
@@ -523,13 +525,13 @@ int SystemManager::performSafetyChecks(){
     }
 
     // Check overcurrent
-    if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
-        Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.loadShuntCurrent) + " mA");
-        loadStatus = -1;
-        loadFETControl(false); // cut power to loads
-        notifyObservers("system_error", "Overcurrent detected! Shutting off loads.");
-        return 1; // return error code for overcurrent
-    }
+    // if(systemData.loadShuntCurrent > deviceConfig.max_current && loadInaStatus == 1) {
+    //     Serial.println("Overcurrent detected! Shutting off loads. Current: " + String(systemData.loadShuntCurrent) + " mA");
+    //     loadStatus = -1;
+    //     loadFETControl(false); // cut power to loads
+    //     notifyObservers("system_error", "Overcurrent detected! Shutting off loads.");
+    //     return 1; // return error code for overcurrent
+    // }
 
     // Check for FET failures
     // // Solar should be disconnected but current is still flowing - DISABLED DUE TO HARDWARE ISSUE (low impedance path between battery and solar grounds, causes magic smoke)
@@ -557,19 +559,24 @@ int SystemManager::performSafetyChecks(){
 
     // Check for battery below safety voltage
     if(systemData.batt.minCellVoltage < deviceConfig.safety_cell_voltage && (bmsStatus == 1 || sys_flags.ENABLE_FAKE_BATTERY)) {
-        Serial.println("Cell" + String(systemData.batt.minCellIndex) + "below safety voltage, shutting down!" + "Cell voltage: " + String(systemData.batt.minCellVoltage) + " V. Shutting off loads.");
-        Serial.print("CV: ");
-        for (int i = 0; i < 12; i++){
-            Serial.print(systemData.batt.cellVoltages[i]); Serial.print(", ");
+        Serial.println("Cell" + String(systemData.batt.minCellIndex) + "below safety voltage!" + "Cell voltage: " + String(systemData.batt.minCellVoltage) + " V. Shutting off loads.");
+        Serial.print("Check number: ");
+        Serial.println(numSafetyVoltageRechecks + 1);
+
+        if(numSafetyVoltageRechecks >= maxSafetyVoltageRechecks) {
+            numSafetyVoltageRechecks = 0;
+            loadFETControl(false); // cut power to loads
+            notifyObservers("system_error", "Cell below safety voltage, shutting down!");
+            delay(500);
+            digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
+            delay(1000);
+            return 4; // return error code for cell voltage below safety threshold
         }
-        Serial.println();
-        loadFETControl(false); // cut power to loads
-        notifyObservers("system_error", "Cell below safety voltage, shutting down!");
-        delay(500);
-        digitalWrite(deviceConfig.restart_pin, LOW); // restart pin to shut down the system
-        delay(1000);
-        return 4; // return error code for cell voltage below safety threshold
+        else {
+            numSafetyVoltageRechecks++;
+        }
     }
+    else numSafetyVoltageRechecks = 0; // reset recheck counter if voltage is back above threshold
 
     // Check if BMS connected using read
     uint8_t temp_cfr[6];
