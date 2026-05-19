@@ -1,6 +1,6 @@
 {
     "wifi_config":{
-        "hostname": "solar_pv_005",
+        "hostname": "solar_pv_003",
         "force_use_hotspot": false,
         "password": "solarpv123"
 
@@ -14,11 +14,11 @@
         "data_topic": "solar_pv/data",
         "command_topic": "solar_pv/command",
         "status_topic": "solar_pv/status",
-        "client_id": "solar_pv_client_005"
+        "client_id": "solar_pv_client_003"
     },
 
     "device_config":{
-        "device_id": "solar_pv_005",
+        "device_id": "solar_pv_003",
         "slow_boot": false,
         "num_cells": 8,
         "max_cell_voltage": 4.1,

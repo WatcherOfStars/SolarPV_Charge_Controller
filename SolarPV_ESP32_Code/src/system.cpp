@@ -82,6 +82,9 @@ void SystemManager::setupSystem() {
     pinMode(deviceConfig.solar_safety_fet_pin, OUTPUT);
     pinMode(deviceConfig.load_fet_pin, OUTPUT);
     pinMode(deviceConfig.fan_pin, OUTPUT);
+    pinMode(deviceConfig.thermistor_pin, INPUT);
+    pinMode(deviceConfig.boot_LED_pin, OUTPUT);
+    pinMode(33, OUTPUT); // pin 33 is used for precharge FET control for capacitive loads (e.g. inverters)
 
     ledcSetup(0, 5000, 8); // Setup PWM for fan control (channel 0, 5 kHz frequency, 8-bit resolution)
     ledcAttachPin(deviceConfig.fan_pin, 0); // Attach the fan control pin to the PWM channel
@@ -620,8 +623,22 @@ void SystemManager::loadFETControl(bool state){
     }
     else loadStatus = state;
     if(sys_flags.ENABLE_LOAD_FETs == 0) state=false; // Turn off if load FET control is disabled by flags
-    digitalWrite(deviceConfig.load_fet_pin, state ? HIGH : LOW);
+    if(state) { 
+        //turning on loads, need to pulse modulate to precharge any large capacitors
+        for(int i = 0; i<1; i++){
+            digitalWrite(deviceConfig.load_fet_pin, HIGH);
+            delayMicroseconds(10);
+            digitalWrite(deviceConfig.load_fet_pin, LOW);
+            delayMicroseconds(90);
+        }
+        digitalWrite(deviceConfig.load_fet_pin, HIGH); // leave load FETs on after precharge
+    }
+    else digitalWrite(deviceConfig.load_fet_pin, LOW);
     systemData.batt.isDischarging = state; // update discharging status based on load FET state
+}
+
+void SystemManager::prechargeFETControl(bool state){ //TODO: TESTING VERSION, make full implementation
+    digitalWrite(33, state ? HIGH : LOW);
 }
 
 void SystemManager::fanControl(bool state){
@@ -634,13 +651,13 @@ void SystemManager::balanceCells() {
     if(bmsStatus == 1){
         BattData batt = systemData.batt;
 
-        // if(batt.minCellVoltage < batt.averageCellVoltage - 0.1){ // if a cell is very below average, pull up balance
-        //     systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, batt.averageCellVoltage, batt.minCellIndex);
-        // }
-        // else{ // else pull down balance
-        //     systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
-        // }
-        systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
+        if(batt.minCellVoltage < batt.averageCellVoltage - 0.15){ // if a cell is very below average, pull up balance
+            systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, batt.averageCellVoltage, batt.minCellIndex);
+        }
+        else{ // else pull down balance
+            systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
+        }
+        //systemData.batt.cellDischarge = pullDownBalance(batt.cellVoltages, batt.averageCellVoltage);
 
     }
     
@@ -675,6 +692,12 @@ void SystemManager::onNotify(const char* topic, const char* message) {
         std::cout << "Handling Toggle_Fan with message: " << message << std::endl;
         if (strcmp(message, "1") == 0) fanControl(true);
         else if (strcmp(message, "0") == 0) fanControl(false);
+    }
+    
+    else if (strcmp(topic, "Toggle_Test_FET") == 0) {
+        std::cout << "Handling Toggle_Test_FET with message: " << message << std::endl;
+        if (strcmp(message, "1") == 0) prechargeFETControl(true);
+        else if (strcmp(message, "0") == 0) prechargeFETControl(false);
     }
 
     // HANDLE FLAG TOGGLES

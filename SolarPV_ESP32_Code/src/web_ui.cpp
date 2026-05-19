@@ -82,6 +82,9 @@ void WebUI::setupWebUI(){
 	toggle_load_switcher = ESPUI.addControl(Switcher, "Toggle_Load_FETs", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
 	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle Fan:", None, fet_toggle_section), labelStyle);
 	toggle_fan_switcher = ESPUI.addControl(Switcher, "Toggle_Fan", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
+	
+	ESPUI.setElementStyle(ESPUI.addControl(Label, "", "Toggle_Test_FET:", None, fet_toggle_section), labelStyle);
+	ESPUI.addControl(Switcher, "Toggle_Test_FET", "", Wetasphalt, fet_toggle_section, my_updateObserversCallback);
 
 	// charging and discharging
 	auto chrg_section = ESPUI.addControl(Separator, "Charge State", "", None, maintab);

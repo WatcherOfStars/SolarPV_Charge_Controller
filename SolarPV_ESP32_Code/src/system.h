@@ -96,6 +96,7 @@ public:
     void balanceCells(); //to be called to balance battery cells
     void solarFETControl(bool state); //to control solar FETs
     void loadFETControl(bool state); //to control load FETs
+    void prechargeFETControl(bool state); // to control precharge FETs for capacitive loads (e.g. inverters)
     void fanControl(bool state); //to control cooling fan
     void onNotify(const char* topic, const char* message) override;
 
