@@ -623,22 +623,23 @@ void SystemManager::loadFETControl(bool state){
     }
     else loadStatus = state;
     if(sys_flags.ENABLE_LOAD_FETs == 0) state=false; // Turn off if load FET control is disabled by flags
-    if(state) { 
-        //turning on loads, need to pulse modulate to precharge any large capacitors
-        for(int i = 0; i<1; i++){
-            digitalWrite(deviceConfig.load_fet_pin, HIGH);
-            delayMicroseconds(10);
-            digitalWrite(deviceConfig.load_fet_pin, LOW);
-            delayMicroseconds(90);
-        }
-        digitalWrite(deviceConfig.load_fet_pin, HIGH); // leave load FETs on after precharge
-    }
-    else digitalWrite(deviceConfig.load_fet_pin, LOW);
+    digitalWrite(deviceConfig.load_fet_pin, state ? HIGH : LOW);
     systemData.batt.isDischarging = state; // update discharging status based on load FET state
 }
 
 void SystemManager::prechargeFETControl(bool state){ //TODO: TESTING VERSION, make full implementation
-    digitalWrite(33, state ? HIGH : LOW);
+    //digitalWrite(33, state ? HIGH : LOW);
+    if(state) { 
+        // // if turning on loads, need to pulse modulate to precharge any large capacitors
+        // for(int i = 0; i<1; i++){
+        //     digitalWrite(33, HIGH);
+        //     delayMicroseconds(100);
+        //     digitalWrite(33, LOW);
+        //     delayMicroseconds(900);
+        // }
+        digitalWrite(33, HIGH); // leave load FETs on after precharge
+    }
+    else digitalWrite(33, LOW);
 }
 
 void SystemManager::fanControl(bool state){
@@ -651,7 +652,7 @@ void SystemManager::balanceCells() {
     if(bmsStatus == 1){
         BattData batt = systemData.batt;
 
-        if(batt.minCellVoltage < batt.averageCellVoltage - 0.15){ // if a cell is very below average, pull up balance
+        if(batt.minCellVoltage < batt.averageCellVoltage - 0.1){ // if a cell is very below average, pull up balance
             systemData.batt.cellDischarge = pullUpBalance(batt.cellVoltages, batt.averageCellVoltage, batt.minCellIndex);
         }
         else{ // else pull down balance
